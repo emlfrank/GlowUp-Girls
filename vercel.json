@@ -1,4 +1,7 @@
 {
   "installCommand": "corepack enable && pnpm install",
-  "buildCommand": "pnpm run build"
+  "buildCommand": "pnpm run build",
+  "engines": {
+    "node": "20.x"
+  }
 }
