@@ -55,9 +55,9 @@
     "zod": "catalog:",
     "zod-validation-error": "^3.4.0"
   },
-  "dependencies": {
-    "@expo-google-fonts/poppins": "^0.4.1",
-    "expo-calendar": "^15.0.8",
-    "expo-notifications": "^55.0.23"
-  }
+"dependencies": {
+  "@expo-google-fonts/poppins": "^0.4.1",
+  "@supabase/supabase-js": "^2.49.8",
+  "expo-calendar": "^15.0.8",
+  "expo-notifications": "^55.0.23"
 }
