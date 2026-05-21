@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FAF6ED">
+<title>GlowUp Girls Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FAF6ED;--surface:#FFFBF5;--card:#FFFFFF;
+  --text:#1C1007;--muted:#7A6855;--border:#DDD0BC;--subtle:#EDE5D5;
+  --rose:#BF6375;--lavender:#8B7DB0;--teal:#4D8E89;--gold:#C4953A;
+  --green:#6B9E8F;--red:#B84040;--r:12px;
+}
+html,body{height:100%;background:#e8e0d0;font-family:'Poppins',sans-serif;overflow-x:hidden}
+button,input,select,textarea{font-family:inherit}
+
+.app{display:flex;flex-direction:column;max-width:500px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;box-shadow:0 0 60px rgba(0,0,0,.15)}
+
+/* VIEWS */
+.view{display:none;flex:1;flex-direction:column;padding-bottom:72px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.view.active{display:flex}
+
+/* LOGIN */
+#v-login{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;background:var(--bg)}
+#v-login.active{display:flex}
+.login-logo{font-family:'Playfair Display',serif;font-size:36px;text-align:center;margin-bottom:6px}
+.login-sub{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:40px;text-align:center}
+.login-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;text-align:center}
+.login-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px}
+.login-btn{padding:16px;border-radius:12px;border:1.5px solid;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
+.login-btn:hover{opacity:.85;transform:translateY(-1px)}
+
+/* TOP NAV */
+.top-nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.app-title{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:-.3px;line-height:1}
+.app-sub{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-top:1px}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 11px;cursor:pointer;gap:2px;color:var(--muted);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;transition:color .15s;border:none;background:none;position:relative}
+.nav-item.active{color:var(--rose)}
+.nav-item svg{width:20px;height:20px;stroke-width:1.8}
+.nav-badge{position:absolute;top:6px;right:calc(50% - 16px);background:var(--rose);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;display:none}
+.nav-badge.show{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:transform .15s,box-shadow .15s;cursor:pointer}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.card:active{transform:scale(.98)}
+.scroll-body{padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px}
+.section-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin:4px 0 8px}
+
+/* USER PILL */
+.user-pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid;cursor:pointer;font-size:11px;font-weight:700;background:none;transition:all .15s;flex-shrink:0}
+.user-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pts-badge{display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:8px;border:1px solid;font-size:11px;font-weight:700;flex-shrink:0}
+
+/* CREATOR CARDS */
+.creator-card{display:flex;flex-direction:row;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;margin-bottom:8px}
+.creator-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.07)}
+.creator-strip{width:5px;flex-shrink:0}
+.creator-body{flex:1;padding:13px 12px 13px 11px;display:flex;align-items:center;gap:10px}
+.creator-idx{font-family:'Playfair Display',serif;font-size:18px;opacity:.28;width:24px;flex-shrink:0}
+.creator-info{flex:1}
+.creator-name{font-size:14px;font-weight:700;margin-bottom:1px}
+.creator-tagline{font-size:11px;color:var(--muted)}
+.creator-count{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;border:1px solid;margin-top:4px;letter-spacing:.3px}
+
+/* CLASS CARDS */
+.class-card{display:flex;flex-direction:row;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;margin-bottom:7px}
+.class-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.class-strip{width:4px;flex-shrink:0}
+.class-body{flex:1;padding:11px 11px 11px 9px;display:flex;gap:8px;align-items:flex-start}
+.class-num{font-size:10px;font-weight:700;opacity:.35;width:18px;flex-shrink:0;margin-top:2px}
+.class-info{flex:1;min-width:0}
+.class-name{font-size:13px;font-weight:700;margin-bottom:4px;line-height:1.2}
+.class-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+.level-badge{font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;border:1px solid}
+.dur-row{display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted)}
+.class-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.yt-btn{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#FF0000;background:#FF000010;border:1px solid #FF000025;border-radius:5px;padding:3px 8px;text-decoration:none;cursor:pointer;transition:opacity .15s}
+.yt-btn:hover{opacity:.75}
+.class-right{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.pts-tag{display:flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:3px 6px;border-radius:5px;border:1px solid}
+
+/* TOGGLE */
+.toggle-row{display:flex;background:var(--subtle);border-radius:8px;padding:3px;gap:3px}
+.toggle-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--muted);transition:all .15s}
+.toggle-btn.active{background:var(--card);color:var(--rose)}
+.week-banner{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);font-size:10px;color:var(--muted)}
+
+/* CLASS DETAIL */
+.detail-header{padding:14px 16px 16px;border-bottom:1px solid}
+.back-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border:none;background:none;margin-bottom:12px;padding:0;transition:color .15s}
+.back-btn:hover{color:var(--text)}
+.detail-level{display:inline-block;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:2px 8px;border-radius:5px;border:1px solid;margin-bottom:5px}
+.detail-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:2px;line-height:1.1}
+.detail-creator-name{font-size:11px;color:var(--muted);margin-bottom:7px}
+.detail-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.meta-chip{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);font-weight:500}
+
+/* DATE SCROLL */
+.date-scroll{display:flex;gap:7px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.date-scroll::-webkit-scrollbar{display:none}
+.date-pill{width:50px;height:58px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:all .15s}
+.date-pill:hover:not(.selected){border-color:var(--rose)}
+.date-pill.selected{background:var(--rose);border-color:var(--rose);color:#fff}
+.date-day{font-size:8px;font-weight:700;text-transform:uppercase;opacity:.65}
+.date-num{font-size:17px;font-weight:700}
+
+/* TIME GRID */
+.time-grid{display:flex;flex-wrap:wrap;gap:6px}
+.time-slot{padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--card);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text)}
+.time-slot:hover:not(.disabled){border-color:var(--rose)}
+.time-slot.selected{background:var(--rose);border-color:var(--rose);color:#fff}
+.time-slot.disabled{opacity:.3;cursor:not-allowed;background:var(--subtle)}
+
+/* BOOKING MODE */
+.mode-row{display:flex;gap:6px}
+.mode-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;border-radius:7px;border:1px solid var(--border);background:var(--card);font-size:10px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s}
+.mode-btn.active{background:var(--rose);border-color:var(--rose);color:#fff}
+.mode-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+/* BOOK BAR */
+.book-bar{position:sticky;bottom:72px;background:var(--card);border-top:1px solid var(--border);padding:10px 14px 12px;box-shadow:0 -4px 20px rgba(0,0,0,.06);z-index:40}
+.book-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:8px;border:1.5px solid;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
+.book-btn.ready{background:var(--rose);border-color:var(--rose);color:#fff}
+.book-btn.ready:hover{background:#a84e63}
+.book-btn.disabled{background:var(--subtle);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.confirmed-badge{display:flex;align-items:center;gap:7px;padding:9px 12px;border-radius:8px;border:1px solid #4D8E8940;background:#4D8E8918;font-size:12px;font-weight:600;color:#3a7268;margin-bottom:7px}
+.action-row{display:flex;gap:7px}
+.action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);font-size:12px;font-weight:600;cursor:pointer;color:var(--text);transition:all .15s}
+.action-btn.primary{background:var(--rose);border-color:var(--rose);color:#fff}
+.action-btn.primary:hover{background:#a84e63}
+
+/* SCHEDULE */
+.schedule-header{background:linear-gradient(135deg,#FFE0EE,#FFF0F7);padding:16px 16px 18px;border-bottom:1px solid #DDD0BC}
+.schedule-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--rose);margin-bottom:2px}
+.day-group{margin-bottom:4px}
+.day-label-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.day-dot{width:7px;height:7px;border-radius:50%}
+.day-label{font-size:14px;font-weight:700}
+.booking-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;display:flex;align-items:flex-start;margin-bottom:6px;box-shadow:0 1px 6px rgba(0,0,0,.04);flex-direction:column;gap:8px}
+.booking-card-top{display:flex;align-items:center;width:100%}
+.time-badge{padding:4px 9px;border-radius:7px;font-size:11px;font-weight:600;margin-right:9px;flex-shrink:0}
+.booking-info{flex:1;min-width:0}
+.booking-class-name{font-size:13px;font-weight:600;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.booking-creator{font-size:10px;color:var(--muted)}
+.booking-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.price-badge{padding:3px 7px;border-radius:6px;font-size:11px;font-weight:700;background:#C4953A22;color:#8a6520}
+.cancel-btn{background:none;border:none;cursor:pointer;padding:2px;color:var(--muted);display:flex;align-items:center;transition:color .15s;font-size:16px}
+.cancel-btn:hover{color:var(--red)}
+
+/* REACTIONS & COMMENTS */
+.reaction-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.reaction-btn{background:var(--subtle);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:13px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:3px}
+.reaction-btn:hover{border-color:var(--rose)}
+.reaction-btn.mine{background:var(--rose)18;border-color:var(--rose)50}
+.add-reaction-btn{background:none;border:1px dashed var(--border);border-radius:20px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--muted);transition:all .15s}
+.add-reaction-btn:hover{border-color:var(--rose);color:var(--rose)}
+.comment-area{border-top:1px solid var(--border);padding-top:8px}
+.comment-item{font-size:11px;margin-bottom:4px;line-height:1.5}
+.comment-user{font-weight:700}
+.comment-input-row{display:flex;gap:6px;margin-top:6px}
+.comment-input{flex:1;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s}
+.comment-input:focus{border-color:var(--rose)}
+.comment-send{background:var(--rose);border:none;border-radius:7px;padding:7px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;transition:opacity .15s}
+.comment-send:hover{opacity:.85}
+
+/* STEPS */
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.step-card.goal-met{border-width:1.5px}
+.goal-banner{display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;font-size:9px;font-weight:700;color:#fff;letter-spacing:2px;text-transform:uppercase}
+.step-header{padding:11px 13px 7px;display:flex;align-items:center;gap:8px}
+.step-name{flex:1;font-size:15px;font-weight:700}
+.step-count{font-size:19px;font-weight:700}
+.progress-track{height:7px;background:var(--subtle);margin:0 13px;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.progress-labels{display:flex;justify-content:space-between;padding:3px 13px 10px;font-size:10px;color:var(--muted)}
+.log-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:9px;margin-bottom:8px}
+.log-header{display:flex;align-items:center;gap:6px}
+.log-name{flex:1;font-size:13px;font-weight:700}
+.quick-row{display:flex;gap:6px}
+.quick-btn{flex:1;padding:8px 3px;border-radius:6px;border:1px solid;font-size:11px;font-weight:700;cursor:pointer;background:none;transition:opacity .15s;text-align:center}
+.quick-btn:hover{opacity:.75}
+.input-row{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.step-input{flex:1;padding:9px 11px;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)}
+.add-btn{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;color:#fff;font-size:18px;font-weight:700;flex-shrink:0;transition:opacity .15s}
+.add-btn:hover{opacity:.85}
+.reset-btn{background:none;border:none;cursor:pointer;padding:2px;color:var(--muted);display:flex;align-items:center;transition:color .15s;font-size:14px}
+.reset-btn:hover{color:var(--text)}
+
+/* PRIZE */
+.prize-header{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px}
+.prize-title{font-family:'Playfair Display',serif;font-size:22px}
+.days-badge{text-align:center;padding:7px 11px;border-radius:8px;border:1px solid var(--border);background:var(--subtle)}
+.days-num{font-size:18px;font-weight:700;display:block}
+.days-lbl{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.tiers-row{display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.tier-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:11px 3px;gap:2px}
+.tier-emoji-lg{font-size:16px}
+.tier-pts{font-size:10px;font-weight:700}
+.tier-name-sm{font-size:8px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
+.tier-divider{width:1px;background:var(--border)}
+.winner-card{display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:1.5px solid}
+.user-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.user-card-header{padding:12px 14px 8px;display:flex;align-items:center;gap:8px}
+.user-card-name{flex:1;font-size:16px;font-weight:700}
+.points-bubble{padding:4px 10px;border-radius:6px;border:1px solid;font-size:14px;font-weight:700}
+.breakdown-card{margin:0 13px 12px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);padding:10px;display:flex;flex-direction:column;gap:4px}
+.breakdown-title{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.breakdown-row{display:flex;justify-content:space-between;align-items:center}
+.breakdown-label{font-size:11px;color:var(--muted)}
+.breakdown-value{font-size:11px;font-weight:700}
+.rules-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;display:flex;flex-direction:column;gap:8px}
+.rule-row{display:flex;align-items:center;gap:8px}
+.rule-lbl{flex:1;font-size:12px}
+.rule-pts{font-size:12px;font-weight:700}
+
+/* ACTIVITY / INVITES */
+.activity-header{background:linear-gradient(135deg,#EDE5FF,#F5F0FF);padding:16px 16px 16px;border-bottom:1px solid #DDD0BC}
+.activity-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--lavender);margin-bottom:2px}
+.invite-card{background:var(--card);border:1.5px solid var(--lavender)40;border-radius:var(--r);padding:13px;margin-bottom:8px}
+.invite-from{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--lavender);margin-bottom:3px}
+.invite-class{font-size:14px;font-weight:700;margin-bottom:2px}
+.invite-meta{font-size:11px;color:var(--muted);margin-bottom:10px}
+.invite-actions{display:flex;gap:7px}
+.invite-btn{flex:1;padding:9px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;text-align:center}
+.invite-btn.accept{background:var(--teal);border-color:var(--teal);color:#fff}
+.invite-btn.decline{background:var(--subtle);border-color:var(--border);color:var(--muted)}
+
+/* UTILS */
+.info-card{display:flex;gap:7px;align-items:flex-start;border-radius:8px;border:1px solid var(--border);background:var(--subtle);padding:10px 11px;font-size:11px;color:var(--muted);line-height:1.6}
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:60px 20px 30px;gap:8px;text-align:center}
+.empty-icon{font-size:48px;opacity:.45}
+.empty-title{font-size:17px;font-weight:700}
+.empty-sub{font-size:12px;color:var(--muted);line-height:1.6;max-width:240px}
+
+/* TOAST */
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--text);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 18px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;animation:slideUp .22s ease}
+@keyframes slideUp{from{transform:translateY(36px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px}
+.modal-body{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+.modal-btn-row{display:flex;gap:7px;margin-top:8px}
+.modal-btn{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--subtle);color:var(--text);transition:all .15s}
+.modal-btn.primary{background:var(--rose);border-color:var(--rose);color:#fff}
+.modal-btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.form-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;display:block}
+.form-input{width:100%;border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:13px;background:var(--card);color:var(--text);outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--rose)}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:12px}
+.loading-screen.hide{display:none}
+.loading-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--rose)}
+.loading-dot{display:flex;gap:6px}
+.loading-dot span{width:8px;height:8px;border-radius:50%;background:var(--rose);animation:bounce .9s infinite}
+.loading-dot span:nth-child(2){animation-delay:.15s}
+.loading-dot span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loading">
+  <div class="loading-title">GlowUp Girls</div>
+  <div class="loading-dot"><span></span><span></span><span></span></div>
+</div>
+
+<div class="app">
+
+<!-- LOGIN -->
+<div id="v-login" class="view">
+  <div class="login-logo">💕 GlowUp Girls</div>
+  <div class="login-sub">Studio</div>
+  <div class="login-label">Who are you?</div>
+  <div class="login-btns">
+    <button class="login-btn" style="color:#BF6375;border-color:#BF637550;background:#BF637510" onclick="login('kelsey')">
+      🌸 Kelsey
+    </button>
+    <button class="login-btn" style="color:#8B7DB0;border-color:#8B7DB050;background:#8B7DB010" onclick="login('elizabeth')">
+      💜 Elizabeth
+    </button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="v-home" class="view">
+  <div class="top-nav">
+    <div><div class="app-title">GlowUp Girls</div><div class="app-sub">Studio</div></div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="pts-badge" id="home-pts" style="border-color:var(--gold)40;background:var(--gold)15;color:var(--gold)">⭐ 0 pts</div>
+      <button class="user-pill" id="user-pill" onclick="switchUser()">
+        <div class="user-dot"></div><span id="pill-name">—</span>
+      </button>
+    </div>
+  </div>
+  <div class="scroll-body">
+    <div class="section-label">Choose a Creator</div>
+    <div id="creator-list"></div>
+    <div class="info-card">
+      <span style="font-size:13px">ℹ️</span>
+      <span>Each class earns <strong style="color:var(--gold)">100 pts</strong>. Miss a week: <strong style="color:var(--red)">−500</strong>. Hit steps goal: <strong style="color:var(--green)">+25</strong>.</span>
+    </div>
+  </div>
+</div>
+
+<!-- CREATOR -->
+<div id="v-creator" class="view">
+  <div class="top-nav" id="creator-top" style="flex-direction:column;align-items:flex-start;gap:3px;padding-bottom:13px">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div id="c-handle" style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase"></div>
+    <div id="c-name" style="font-family:'Playfair Display',serif;font-size:20px"></div>
+    <div id="c-tagline" style="font-size:11px;color:var(--muted)"></div>
+    <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap" id="c-badges"></div>
+  </div>
+  <div class="scroll-body">
+    <div class="toggle-row" style="margin-bottom:8px">
+      <button class="toggle-btn active" id="tog-week" onclick="setCreatorTab('week')">⭐ This Week</button>
+      <button class="toggle-btn" id="tog-all" onclick="setCreatorTab('all')"></button>
+    </div>
+    <div class="week-banner" id="week-banner" style="margin-bottom:8px"></div>
+    <div id="class-list"></div>
+    <div style="display:flex;align-items:center;gap:11px;border-radius:var(--r);border:1.5px dashed var(--gold)50;padding:13px;cursor:pointer;background:var(--card);transition:opacity .15s" onclick="openCustomModal()" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+      <div style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--gold)18;flex-shrink:0">🔍</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:1px">Choose Your Own Video</div><div id="custom-sub" style="font-size:11px;color:var(--muted)"></div></div>
+      <span style="color:var(--gold);font-size:18px">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- CLASS DETAIL -->
+<div id="v-class" class="view">
+  <div class="detail-header" id="class-header">
+    <button class="back-btn" id="class-back">← Back</button>
+    <div class="detail-level" id="cls-level"></div>
+    <div class="detail-title" id="cls-name"></div>
+    <div class="detail-creator-name" id="cls-creator"></div>
+    <div class="detail-meta-row">
+      <div class="meta-chip">⏱ <span id="cls-dur"></span> min</div>
+      <div style="width:3px;height:3px;border-radius:50%;background:var(--border)"></div>
+      <div class="meta-chip" style="color:var(--gold)">⭐ 100 pts</div>
+    </div>
+  </div>
+  <div class="scroll-body">
+    <p id="cls-desc" style="font-size:12px;color:var(--muted);line-height:1.7"></p>
+    <a id="cls-yt" href="#" target="_blank" rel="noopener" class="yt-btn" style="align-self:flex-start;font-size:12px;padding:6px 12px">▶ Watch on YouTube ↗</a>
+    <div><div class="section-label">Select Date</div><div class="date-scroll" id="date-scroll"></div></div>
+    <div><div class="section-label">Pick a Time</div><div class="time-grid" id="time-grid"></div></div>
+    <div>
+      <div class="section-label">Booking For</div>
+      <div class="mode-row">
+        <button class="mode-btn active" id="mode-solo" onclick="setMode('solo')">👤 Just <span id="mode-me"></span></button>
+        <button class="mode-btn" id="mode-together" onclick="setMode('together')">👥 Both of us</button>
+        <button class="mode-btn" id="mode-invite" onclick="setMode('invite')">✉️ Invite <span id="mode-bestie"></span></button>
+      </div>
+      <div class="mode-hint" id="mode-hint"></div>
+    </div>
+    <div style="height:110px"></div>
+  </div>
+  <div class="book-bar">
+    <div id="book-confirmed" style="display:none">
+      <div class="confirmed-badge">✅ <span id="confirmed-text"></span></div>
+      <div class="action-row"><button class="action-btn primary" id="done-btn">Done →</button></div>
+    </div>
+    <div id="book-pre">
+      <div id="sel-info" style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:5px;min-height:14px"></div>
+      <button class="book-btn disabled" id="book-btn" onclick="handleBook()"><span id="book-btn-txt">Book Class · 100 pts</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE -->
+<div id="v-schedule" class="view">
+  <div class="schedule-header">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div>
+        <div class="schedule-title">Schedule</div>
+        <div id="sched-sub" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button class="user-pill" id="sched-pill" onclick="switchUser()">
+        <div class="user-dot"></div><span id="sched-name">—</span>
+      </button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button id="sched-tab-mine" onclick="schedTab('mine')" style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--rose);background:var(--rose);color:#fff;font-size:11px;font-weight:700;cursor:pointer">My Classes</button>
+      <button id="sched-tab-bestie" onclick="schedTab('bestie')" style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer" id="bestie-sched-btn"></button>
+    </div>
+  </div>
+  <div class="scroll-body" id="schedule-body"></div>
+</div>
+
+<!-- ACTIVITY -->
+<div id="v-activity" class="view">
+  <div class="activity-header">
+    <div class="activity-title">Activity</div>
+    <div style="font-size:12px;color:var(--lavender);margin-top:2px" id="activity-sub"></div>
+  </div>
+  <div class="scroll-body" id="activity-body"></div>
+</div>
+
+<!-- STEPS -->
+<div id="v-steps" class="view">
+  <div class="top-nav">
+    <div><div class="app-title" style="font-size:20px">Daily Steps</div><div class="app-sub">Goal: 7,000</div></div>
+    <div class="pts-badge" style="border-color:var(--green)40;background:var(--green)15;color:var(--green)">👟 +25 pts</div>
+  </div>
+  <div class="scroll-body">
+    <div class="section-label">Today's Progress</div>
+    <div id="step-cards"></div>
+    <div class="section-label" style="margin-top:4px">Log Steps</div>
+    <div id="log-cards"></div>
+    <div class="info-card"><span style="font-size:13px">ℹ️</span><span>Hit 7,000 steps on any day and earn <strong style="color:var(--green)">+25 pts</strong> toward your prize.</span></div>
+  </div>
+</div>
+
+<!-- PRIZE -->
+<div id="v-prize" class="view">
+  <div class="prize-header">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="prize-title">Prizes</div><div style="font-size:9px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-top:2px" id="prize-month"></div></div>
+      <div class="days-badge"><span class="days-num" id="days-left">—</span><span class="days-lbl">days left</span></div>
+    </div>
+  </div>
+  <div class="scroll-body">
+    <div class="section-label">Prize Tiers</div>
+    <div class="tiers-row" id="tiers-row"></div>
+    <div id="winner-area"></div>
+    <div class="section-label" style="margin-top:4px">Your Points</div>
+    <div id="prize-cards"></div>
+    <div class="section-label">How Points Work</div>
+    <div class="rules-card">
+      <div class="rule-row"><span>✅</span><span class="rule-lbl">Book a class</span><span class="rule-pts" style="color:var(--green)">+100 pts</span></div>
+      <div class="rule-row"><span>👟</span><span class="rule-lbl">Hit 7,000 steps/day</span><span class="rule-pts" style="color:var(--green)">+25 pts</span></div>
+      <div class="rule-row"><span>❌</span><span class="rule-lbl">Cancel a class</span><span class="rule-pts" style="color:var(--red)">−100 pts</span></div>
+      <div class="rule-row"><span>📅</span><span class="rule-lbl">Miss a full week</span><span class="rule-pts" style="color:var(--red)">−500 pts</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="navTo('v-home','nav-home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Classes
+  </button>
+  <button class="nav-item" id="nav-schedule" onclick="navTo('v-schedule','nav-schedule')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
+  </button>
+  <button class="nav-item" id="nav-activity" onclick="navTo('v-activity','nav-activity')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+    Activity<div class="nav-badge" id="activity-badge">0</div>
+  </button>
+  <button class="nav-item" id="nav-steps" onclick="navTo('v-steps','nav-steps')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>Steps
+  </button>
+  <button class="nav-item" id="nav-prize" onclick="navTo('v-prize','nav-prize')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 21h8m-4-4v4M6 2h12l-2 7H8L6 2zm0 0a5 5 0 01-2 4h16a5 5 0 01-2-4"/></svg>Prizes
+  </button>
+</nav>
+
+</div><!-- end .app -->
+
+<div class="toast" id="toast"></div>
+
+<!-- CANCEL MODAL -->
+<div class="modal-overlay" id="cancel-modal">
+  <div class="modal">
+    <div class="modal-title">Cancel Class?</div>
+    <div class="modal-body" id="cancel-body"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn" onclick="closeModal('cancel-modal')">Keep It</button>
+      <button class="modal-btn danger" id="cancel-confirm-btn">Cancel Class</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM CLASS MODAL -->
+<div class="modal-overlay" id="custom-modal">
+  <div class="modal">
+    <button class="back-btn" onclick="closeModal('custom-modal')" style="margin-bottom:10px">← Back</button>
+    <div class="modal-title" id="custom-modal-title"></div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:11px">
+      <div><label class="form-label">YouTube URL</label><input class="form-input" id="c-url" type="url" placeholder="https://youtube.com/watch?v=..."></div>
+      <div><label class="form-label">Class Name</label><input class="form-input" id="c-name-inp" type="text" placeholder="e.g. Morning Flow"></div>
+      <div><label class="form-label">Duration (minutes)</label><input class="form-input" id="c-dur" type="number" placeholder="30" min="5" max="120"></div>
+    </div>
+    <div class="modal-btn-row" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('custom-modal')">Cancel</button>
+      <button class="modal-btn primary" onclick="saveCustomClass()">Add & Book →</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMOJI PICKER MODAL -->
+<div class="modal-overlay" id="emoji-modal">
+  <div class="modal">
+    <div class="modal-title">React</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;justify-content:center">
+      <span onclick="pickEmoji('🔥')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">🔥</span>
+      <span onclick="pickEmoji('💪')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">💪</span>
+      <span onclick="pickEmoji('❤️')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">❤️</span>
+      <span onclick="pickEmoji('🎉')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">🎉</span>
+      <span onclick="pickEmoji('⭐')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">⭐</span>
+      <span onclick="pickEmoji('😅')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">😅</span>
+      <span onclick="pickEmoji('🏆')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">🏆</span>
+      <span onclick="pickEmoji('💕')" style="font-size:28px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--subtle)'" onmouseout="this.style.background='transparent'">💕</span>
+    </div>
+    <div class="modal-btn-row" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('emoji-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(
+  'https://einrfndbtscmcrgdgyxx.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpbnJmbmRidHNjbWNyZ2RneXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjEwNDMsImV4cCI6MjA5NDgzNzA0M30.b7Tog1oei15zufPQeCOq6fO5sWi7hBDr_QW6IjYdAnQ'
+);
+
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+const PRIZE_TIERS=[
+  {points:500,name:"Film Night Kit",emoji:"🎬",desc:"Artisan popcorn, scented candle, face masks & a feel-good film"},
+  {points:1000,name:"Smoothie Bar Fund",emoji:"🥤",desc:"$15 each at your favourite juice bar or açaí bowl spot"},
+  {points:1500,name:"Spa Afternoon",emoji:"🛁",desc:"A shared spa budget for a treatment or the fanciest at-home pamper"},
+  {points:2000,name:"Fancy Brunch Date",emoji:"🥂",desc:"A proper celebration brunch, dressed up — your choice of spot"},
+];
+const USERS={kelsey:{id:"kelsey",name:"Kelsey",color:"#BF6375"},elizabeth:{id:"elizabeth",name:"Elizabeth",color:"#8B7DB0"}};
+const TIME_SLOTS=["6:00 AM","7:00 AM","8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM"];
+const LEVEL_COLORS={Beginner:"#4D8E89",Intermediate:"#BF6375",Advanced:"#8B7DB0"};
+
+const CREATORS=[
+  {id:"pilates-raven",name:"Pilates Body Raven",handle:"@pilatesbodyraven",tagline:"Sculpt & tone with Pilates",color:"#BF6375",classes:[
+    {id:"pbr-1",name:"Full Body Pilates Sculpt",dur:30,level:"Intermediate",desc:"A full-body Pilates session targeting every muscle group for a long, lean look.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=full+body+sculpt"},
+    {id:"pbr-2",name:"Core & Glutes Burn",dur:20,level:"Intermediate",desc:"Intense core and glute work to strengthen and tone your powerhouse.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=core+glutes"},
+    {id:"pbr-3",name:"Beginner Pilates Flow",dur:25,level:"Beginner",desc:"Perfect introduction to Pilates with foundational movements.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=beginner+flow"},
+    {id:"pbr-4",name:"Reformer-Inspired Mat",dur:45,level:"Advanced",desc:"Reformer machine exercises adapted for your mat at home.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=reformer+mat"},
+    {id:"pbr-5",name:"Arms & Upper Body",dur:20,level:"Beginner",desc:"Sculpt gorgeous arms and open your chest with targeted Pilates moves.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=arms+upper"},
+    {id:"pbr-6",name:"Flat Abs Pilates",dur:25,level:"Intermediate",desc:"Targeted abdominal work for a strong, toned core.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=flat+abs"},
+    {id:"pbr-7",name:"Lower Body Burn",dur:30,level:"Intermediate",desc:"Thighs, glutes, and calves — a lower body Pilates flow that burns.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=lower+body"},
+    {id:"pbr-8",name:"Pilates for Flexibility",dur:35,level:"Beginner",desc:"Gentle Pilates stretches to improve range of motion.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=flexibility"},
+    {id:"pbr-9",name:"Wall Pilates",dur:20,level:"Beginner",desc:"Use the wall to deepen your Pilates practice.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=wall+pilates"},
+    {id:"pbr-10",name:"Pilates Barre Fusion",dur:35,level:"Intermediate",desc:"The best of ballet barre and Pilates fused into one elegant workout.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=barre+fusion"},
+    {id:"pbr-11",name:"Quick Morning Pilates",dur:15,level:"Beginner",desc:"A fast but effective morning Pilates wake-up.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=morning"},
+    {id:"pbr-12",name:"Back Strengthening",dur:25,level:"Intermediate",desc:"Targeted back and posture work.",url:"https://www.youtube.com/@pilatesbodyraven/search?query=back"},
+  ]},
+  {id:"yoga-adrienne",name:"Yoga with Adriene",handle:"@yogawithadriene",tagline:"Find what feels good",color:"#8B7DB0",classes:[
+    {id:"ywa-1",name:"Morning Wake-Up Flow",dur:30,level:"Beginner",desc:"Gentle morning yoga to energize your body and set intentions for the day.",url:"https://www.youtube.com/@yogawithadriene/search?query=morning+wake+up"},
+    {id:"ywa-2",name:"Yoga for Anxiety",dur:20,level:"Beginner",desc:"Calming breathwork and poses to soothe your nervous system.",url:"https://www.youtube.com/@yogawithadriene/search?query=anxiety"},
+    {id:"ywa-3",name:"Total Body Yoga",dur:40,level:"Intermediate",desc:"A complete yoga practice for strength, flexibility, and peace of mind.",url:"https://www.youtube.com/@yogawithadriene/search?query=total+body"},
+    {id:"ywa-4",name:"Yoga for Strength",dur:35,level:"Intermediate",desc:"Build functional strength with power yoga sequences.",url:"https://www.youtube.com/@yogawithadriene/search?query=strength"},
+    {id:"ywa-5",name:"Cozy Evening Wind Down",dur:25,level:"Beginner",desc:"Gentle evening yoga to release the day and prepare for sleep.",url:"https://www.youtube.com/@yogawithadriene/search?query=evening+wind+down"},
+    {id:"ywa-6",name:"Yoga for Back Pain",dur:30,level:"Beginner",desc:"Targeted flows to relieve tension and pain in your back.",url:"https://www.youtube.com/@yogawithadriene/search?query=back+pain"},
+    {id:"ywa-7",name:"Yoga for Beginners",dur:20,level:"Beginner",desc:"Your perfect first yoga practice.",url:"https://www.youtube.com/@yogawithadriene/search?query=beginners"},
+    {id:"ywa-8",name:"Power Vinyasa Flow",dur:45,level:"Advanced",desc:"A strong, sweaty vinyasa flow to build heat.",url:"https://www.youtube.com/@yogawithadriene/search?query=power+vinyasa"},
+    {id:"ywa-9",name:"Yoga for Hips & Hamstrings",dur:30,level:"Beginner",desc:"Deep hip openers and hamstring stretches.",url:"https://www.youtube.com/@yogawithadriene/search?query=hips+hamstrings"},
+    {id:"ywa-10",name:"Yoga for Energy",dur:20,level:"Beginner",desc:"An energizing practice to boost your mood.",url:"https://www.youtube.com/@yogawithadriene/search?query=energy"},
+    {id:"ywa-11",name:"Yoga for Neck & Shoulders",dur:25,level:"Beginner",desc:"Targeted relief for tight shoulders and neck tension.",url:"https://www.youtube.com/@yogawithadriene/search?query=neck+shoulders"},
+    {id:"ywa-12",name:"Yoga for Focus & Clarity",dur:20,level:"Beginner",desc:"A grounding practice to sharpen mental focus.",url:"https://www.youtube.com/@yogawithadriene/search?query=focus+clarity"},
+  ]},
+  {id:"yoga-kassandra",name:"Yoga with Kassandra",handle:"@yogawithkassandra",tagline:"Flexibility & mindfulness",color:"#4D8E89",classes:[
+    {id:"ywk-1",name:"Yin Yoga for Flexibility",dur:45,level:"Beginner",desc:"Long-held passive poses to deeply stretch connective tissue.",url:"https://www.youtube.com/@yogawithkassandra/search?query=yin+flexibility"},
+    {id:"ywk-2",name:"Hip Opening Flow",dur:30,level:"Intermediate",desc:"Release tension in your hips with targeted stretches.",url:"https://www.youtube.com/@yogawithkassandra/search?query=hip+opening"},
+    {id:"ywk-3",name:"Morning Vinyasa",dur:25,level:"Intermediate",desc:"Dynamic vinyasa flow to wake up and invigorate.",url:"https://www.youtube.com/@yogawithkassandra/search?query=morning+vinyasa"},
+    {id:"ywk-4",name:"Full Body Stretch",dur:30,level:"Beginner",desc:"Comprehensive stretching routine for improved mobility.",url:"https://www.youtube.com/@yogawithkassandra/search?query=full+body+stretch"},
+    {id:"ywk-5",name:"Bedtime Yin Yoga",dur:20,level:"Beginner",desc:"Deep relaxation poses to melt away the day.",url:"https://www.youtube.com/@yogawithkassandra/search?query=bedtime+yin"},
+    {id:"ywk-6",name:"Spine & Back Yin",dur:30,level:"Beginner",desc:"Yin poses targeting the full length of your spine.",url:"https://www.youtube.com/@yogawithkassandra/search?query=spine+back"},
+    {id:"ywk-7",name:"Splits Training Flow",dur:35,level:"Intermediate",desc:"Progressive flexibility work toward the splits.",url:"https://www.youtube.com/@yogawithkassandra/search?query=splits"},
+    {id:"ywk-8",name:"Shoulders & Neck Release",dur:20,level:"Beginner",desc:"Gentle stretches for tight shoulders and neck.",url:"https://www.youtube.com/@yogawithkassandra/search?query=shoulders+neck"},
+    {id:"ywk-9",name:"Legs & Hips Yin",dur:35,level:"Beginner",desc:"A deep yin practice focused on the entire lower body.",url:"https://www.youtube.com/@yogawithkassandra/search?query=legs+hips"},
+    {id:"ywk-10",name:"Upper Body Yin",dur:30,level:"Beginner",desc:"Melt tension in your arms, chest, and upper back.",url:"https://www.youtube.com/@yogawithkassandra/search?query=upper+body+yin"},
+    {id:"ywk-11",name:"Restorative Yoga",dur:45,level:"Beginner",desc:"Deeply supportive poses for nervous system reset.",url:"https://www.youtube.com/@yogawithkassandra/search?query=restorative"},
+    {id:"ywk-12",name:"Flow & Restore",dur:40,level:"Intermediate",desc:"A balanced class blending energizing flow with restorative holds.",url:"https://www.youtube.com/@yogawithkassandra/search?query=flow+restore"},
+  ]},
+  {id:"workout-roxane",name:"Workout with Roxane",handle:"@workoutwithRoxane",tagline:"Sweat, smile, repeat",color:"#C4953A",classes:[
+    {id:"wwr-1",name:"HIIT Cardio Blast",dur:30,level:"Intermediate",desc:"High-intensity intervals to torch calories and boost metabolism.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=hiit+cardio"},
+    {id:"wwr-2",name:"Dance Cardio Party",dur:25,level:"Beginner",desc:"Fun, upbeat dance moves that make cardio enjoyable.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=dance+cardio"},
+    {id:"wwr-3",name:"Bodyweight Strength",dur:35,level:"Intermediate",desc:"Build real strength using only your bodyweight.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=bodyweight"},
+    {id:"wwr-4",name:"Core Crusher",dur:20,level:"Advanced",desc:"Intense ab and core work for a strong, stable center.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=core"},
+    {id:"wwr-5",name:"Full Body HIIT",dur:40,level:"Advanced",desc:"Full-body high-intensity training.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=full+body+hiit"},
+    {id:"wwr-6",name:"Booty & Legs Sculpt",dur:30,level:"Intermediate",desc:"Lower body burn to sculpt and tone legs and booty.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=booty+legs"},
+    {id:"wwr-7",name:"No-Jump Cardio",dur:25,level:"Beginner",desc:"A low-impact cardio workout that's apartment-friendly.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=no+jump"},
+    {id:"wwr-8",name:"Total Body Tone",dur:35,level:"Intermediate",desc:"Sculpt your whole body with resistance and cardio combo.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=total+body"},
+    {id:"wwr-9",name:"Cardio Kickboxing",dur:30,level:"Intermediate",desc:"Punches, kicks, and combos for a fun cardio burn.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=kickboxing"},
+    {id:"wwr-10",name:"Upper Body Sculpt",dur:25,level:"Intermediate",desc:"Arms, shoulders, and back work.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=upper+body"},
+    {id:"wwr-11",name:"Tabata Burn",dur:20,level:"Advanced",desc:"Classic 20/10 Tabata intervals for maximum fat-burning.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=tabata"},
+    {id:"wwr-12",name:"Stretch & Cool Down",dur:15,level:"Beginner",desc:"Essential post-workout stretching to recover and stay flexible.",url:"https://www.youtube.com/@workoutwithRoxane/search?query=stretch"},
+  ]},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentUser = localStorage.getItem('gu_user') || null;
+let bookings = [];
+let invitations = [];
+let stepLogs = [];
+let reactions = [];
+let comments = [];
+let customClasses = [];
+
+let currentCreatorId = null;
+let currentClassId = null;
+let creatorTab = 'week';
+let selectedDate = null;
+let selectedTime = null;
+let bookingMode = 'solo';
+let bookedId = null;
+let scheduleViewUser = null;
+let currentEmojiBookingId = null;
+let customCreatorId = null;
+let pendingCancelId = null;
+let scheduleTab = 'mine';
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5)}
+function fmtDate(d){return(d instanceof Date?d:new Date(d)).toISOString().split('T')[0]}
+function today(){return fmtDate(new Date())}
+function showToast(m,dur=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function displayDate(ds){
+  const t=today(), tm=fmtDate(new Date(Date.now()+86400000));
+  if(ds===t)return'Today'; if(ds===tm)return'Tomorrow';
+  return new Date(ds+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function isTimePast(ds,ts){
+  if(ds>today())return false; if(ds<today())return true;
+  const now=new Date(), [tp,ap]=ts.split(' '), [h,m]=tp.split(':').map(Number);
+  let hr=h; if(ap==='PM'&&hr!==12)hr+=12; if(ap==='AM'&&hr===12)hr=0;
+  return now.getHours()>hr||(now.getHours()===hr&&now.getMinutes()>=(m||0));
+}
+function isoWeek(d){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=dt.getUTCDay()||7;dt.setUTCDate(dt.getUTCDate()+4-day);const ys=new Date(Date.UTC(dt.getUTCFullYear(),0,1));return Math.ceil((((dt-ys)/86400000)+1)/7)}
+function getWeeklyClasses(cr){const w=isoWeek(new Date());const b=Math.ceil(cr.classes.length/4);return cr.classes.slice((w%b)*4,(w%b)*4+4)}
+function daysToMonday(){const d=new Date().getDay();return d===1?7:d===0?1:8-d}
+function getCurrentYM(){const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`}
+function fmtYM(ym){const[y,m]=ym.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'})}
+function daysEOM(){const n=new Date();return Math.ceil((new Date(n.getFullYear(),n.getMonth()+1,0)-n)/(864e5))}
+function getNext7(){const d=[];for(let i=0;i<7;i++){const x=new Date();x.setDate(x.getDate()+i);d.push(x)}return d}
+
+function getClassById(id){
+  for(const cr of CREATORS){const c=cr.classes.find(x=>x.id===id);if(c)return{cls:c,creator:cr}}
+  const cc=customClasses.find(x=>x.id===id);
+  if(cc)return{cls:{...cc,dur:cc.duration,level:'Intermediate',desc:`Custom class from ${cc.creator_name}`,url:cc.youtube_url},creator:{id:cc.creator_id,name:cc.creator_name,color:'#C4953A',classes:[]}}
+  return null;
+}
+
+function getMonthlyBreakdown(userId){
+  const ym=getCurrentYM(),now=new Date(),[year,month]=ym.split('-').map(Number);
+  const active=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&!b.canceled);
+  const canceled=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&b.canceled);
+  const classPoints=active.length*100, cancelPenalty=canceled.length*100;
+  const stepsBonus=stepLogs.filter(s=>s.date.startsWith(ym)&&s.user_id===userId&&s.steps>=7000).length*25;
+  let weeklyPenalty=0;
+  let ws=new Date(year,month-1,1);
+  const dow=ws.getDay();ws.setDate(ws.getDate()+(dow===0?-6:1-dow));
+  const cws=new Date(now);const cd=now.getDay();cws.setDate(now.getDate()+(cd===0?-6:1-cd));cws.setHours(0,0,0,0);
+  while(ws<cws){
+    const we=new Date(ws);we.setDate(ws.getDate()+6);
+    const tm=month-1;
+    if(we.getMonth()===tm||ws.getMonth()===tm){
+      const has=bookings.some(b=>{if(b.user_id!==userId||b.canceled)return false;const bd=new Date(b.date+'T12:00:00');return bd>=ws&&bd<=we});
+      if(!has)weeklyPenalty+=500;
+    }
+    ws.setDate(ws.getDate()+7);
+  }
+  return{classPoints,cancelPenalty,stepsBonus,weeklyPenalty,total:Math.max(0,classPoints-cancelPenalty+stepsBonus-weeklyPenalty)};
+}
+
+function getUpcoming(userId){
+  const t=today();
+  return bookings.filter(b=>b.user_id===userId&&b.date>=t&&!b.canceled)
+    .sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):a.time.localeCompare(b.time));
+}
+function getTodaySteps(userId){const s=stepLogs.find(x=>x.date===today()&&x.user_id===userId);return s?s.steps:0}
+
+// ══════════════════════════════════════════════
+// SUPABASE OPERATIONS
+// ══════════════════════════════════════════════
+async function loadAll(){
+  const [bk,inv,sl,rx,cm,cc]=await Promise.all([
+    sb.from('bookings').select('*').order('created_at',{ascending:false}),
+    sb.from('invitations').select('*').order('created_at',{ascending:false}),
+    sb.from('step_logs').select('*'),
+    sb.from('reactions').select('*'),
+    sb.from('comments').select('*').order('created_at',{ascending:true}),
+    sb.from('custom_classes').select('*'),
+  ]);
+  if(bk.data)bookings=bk.data;
+  if(inv.data)invitations=inv.data;
+  if(sl.data)stepLogs=sl.data;
+  if(rx.data)reactions=rx.data;
+  if(cm.data)comments=cm.data;
+  if(cc.data)customClasses=cc.data;
+}
+
+function subscribeRealtime(){
+  sb.channel('glowup-all')
+    .on('postgres_changes',{event:'*',schema:'public',table:'bookings'},async()=>{const{data}=await sb.from('bookings').select('*').order('created_at',{ascending:false});if(data){bookings=data;refreshCurrentView()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'invitations'},async()=>{const{data}=await sb.from('invitations').select('*').order('created_at',{ascending:false});if(data){invitations=data;updateActivityBadge();const cv=document.querySelector('.view.active')?.id;if(cv==='v-activity')renderActivity()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'step_logs'},async()=>{const{data}=await sb.from('step_logs').select('*');if(data){stepLogs=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-steps')renderSteps();if(cv==='v-prize')renderPrize()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'reactions'},async()=>{const{data}=await sb.from('reactions').select('*');if(data){reactions=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-schedule')renderSchedule();if(cv==='v-activity')renderActivity()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'comments'},async()=>{const{data}=await sb.from('comments').select('*').order('created_at',{ascending:true});if(data){comments=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-schedule')renderSchedule();if(cv==='v-activity')renderActivity()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'custom_classes'},async()=>{const{data}=await sb.from('custom_classes').select('*');if(data)customClasses=data})
+    .subscribe();
+}
+
+function refreshCurrentView(){
+  const cv=document.querySelector('.view.active')?.id;
+  if(cv==='v-home')renderHome();
+  if(cv==='v-schedule')renderSchedule();
+  if(cv==='v-prize')renderPrize();
+  if(cv==='v-activity')renderActivity();
+  updateActivityBadge();
+}
+
+// ══════════════════════════════════════════════
+// AUTH / LOGIN
+// ══════════════════════════════════════════════
+async function login(userId){
+  currentUser=userId;
+  localStorage.setItem('gu_user',userId);
+  scheduleViewUser=userId;
+  document.getElementById('v-login').classList.remove('active');
+  document.getElementById('loading').classList.remove('hide');
+  await loadAll();
+  subscribeRealtime();
+  document.getElementById('loading').classList.add('hide');
+  renderHome();
+  showView('v-home');
+  updateUserUI();
+  updateActivityBadge();
+}
+
+function switchUser(){
+  const newUser=currentUser==='kelsey'?'elizabeth':'kelsey';
+  currentUser=newUser;
+  localStorage.setItem('gu_user',newUser);
+  scheduleViewUser=newUser;
+  updateUserUI();
+  refreshCurrentView();
+}
+
+function updateUserUI(){
+  const u=USERS[currentUser];
+  document.getElementById('pill-name').textContent=u.name;
+  document.getElementById('sched-name').textContent=u.name;
+  const pts=getMonthlyBreakdown(currentUser).total;
+  document.getElementById('home-pts').textContent=`⭐ ${pts} pts`;
+  const stylePill=(el)=>{el.style.background=u.color+'18';el.style.borderColor=u.color+'40';el.style.color=u.color;el.querySelector('.user-dot').style.background=u.color};
+  stylePill(document.getElementById('user-pill'));
+  stylePill(document.getElementById('sched-pill'));
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  const btn=document.getElementById('sched-tab-bestie');
+  if(btn)btn.textContent=`${bestie.name}'s Classes`;
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function navTo(viewId,navId){
+  showView(viewId);
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(navId).classList.add('active');
+  if(viewId==='v-home')renderHome();
+  if(viewId==='v-schedule'){scheduleViewUser=currentUser;scheduleTab='mine';renderSchedule()}
+  if(viewId==='v-activity')renderActivity();
+  if(viewId==='v-steps')renderSteps();
+  if(viewId==='v-prize')renderPrize();
+}
+function goBack(){
+  if(document.getElementById('v-class').classList.contains('active')){showView(currentCreatorId?'v-creator':'v-home')}
+  else{showView('v-home')}
+}
+
+function updateActivityBadge(){
+  const bestieId=currentUser==='kelsey'?'elizabeth':'kelsey';
+  const pending=invitations.filter(i=>i.to_user_id===currentUser&&i.status==='pending').length;
+  const badge=document.getElementById('activity-badge');
+  badge.textContent=pending;
+  badge.classList.toggle('show',pending>0);
+}
+
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
+function renderHome(){
+  updateUserUI();
+  const el=document.getElementById('creator-list');
+  el.innerHTML='';
+  CREATORS.forEach((cr,i)=>{
+    const d=document.createElement('div');
+    d.className='creator-card';
+    d.innerHTML=`<div class="creator-strip" style="background:${cr.color}"></div>
+      <div class="creator-body">
+        <div class="creator-idx" style="color:${cr.color}">${String(i+1).padStart(2,'0')}</div>
+        <div class="creator-info">
+          <div class="creator-name">${cr.name}</div>
+          <div class="creator-tagline">${cr.tagline}</div>
+          <span class="creator-count" style="color:${cr.color};border-color:${cr.color}40">${cr.classes.length} classes</span>
+        </div>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DDD0BC" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`;
+    d.onclick=()=>openCreator(cr.id);
+    el.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// CREATOR
+// ══════════════════════════════════════════════
+function openCreator(crId){
+  currentCreatorId=crId; creatorTab='week';
+  const cr=CREATORS.find(c=>c.id===crId);
+  const top=document.getElementById('creator-top');
+  top.style.background=cr.color+'10'; top.style.borderBottomColor=cr.color+'40';
+  document.getElementById('c-handle').textContent=cr.handle;
+  document.getElementById('c-handle').style.color=cr.color;
+  document.getElementById('c-name').textContent=cr.name;
+  document.getElementById('c-tagline').textContent=cr.tagline;
+  document.getElementById('tog-all').textContent=`⊞ All ${cr.classes.length}`;
+  document.getElementById('custom-sub').textContent=`Paste any ${cr.name} YouTube link and book it`;
+  document.getElementById('c-badges').innerHTML=
+    `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid ${cr.color}40;background:var(--card);color:${cr.color}">▶ ${cr.classes.length} classes</span>
+     <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted)">🔄 Refreshes in ${daysToMonday()} days</span>`;
+  document.getElementById('tog-week').classList.add('active');
+  document.getElementById('tog-all').classList.remove('active');
+  renderCreatorClasses();
+  showView('v-creator');
+}
+
+function setCreatorTab(tab){
+  creatorTab=tab;
+  document.getElementById('tog-week').classList.toggle('active',tab==='week');
+  document.getElementById('tog-all').classList.toggle('active',tab==='all');
+  renderCreatorClasses();
+}
+
+function renderCreatorClasses(){
+  const cr=CREATORS.find(c=>c.id===currentCreatorId);
+  const weekly=getWeeklyClasses(cr);
+  const classes=creatorTab==='all'?cr.classes:weekly;
+  const banner=document.getElementById('week-banner');
+  banner.style.display=creatorTab==='week'?'flex':'none';
+  banner.textContent=`📅 ${weekly.length} of ${cr.classes.length} classes this week — refreshes every Monday`;
+  const el=document.getElementById('class-list');
+  el.innerHTML='';
+  classes.forEach((cls,i)=>{
+    const lc=LEVEL_COLORS[cls.level];
+    const d=document.createElement('div');
+    d.className='class-card';
+    d.innerHTML=`<div class="class-strip" style="background:${cr.color}"></div>
+      <div class="class-body">
+        <div class="class-num" style="color:${cr.color}">${String(i+1).padStart(2,'0')}</div>
+        <div class="class-info">
+          <div class="class-name">${cls.name}</div>
+          <div class="class-meta">
+            <span class="level-badge" style="color:${lc};border-color:${lc}40;background:${lc}15">${cls.level}</span>
+            <div class="dur-row">⏱ ${cls.dur} min</div>
+          </div>
+          <div class="class-desc">${cls.desc}</div>
+          <a class="yt-btn" href="${cls.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ YouTube ↗</a>
+        </div>
+        <div class="class-right">
+          <div class="pts-tag" style="color:var(--gold);border-color:var(--gold)40;background:var(--gold)15">⭐ 100</div>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DDD0BC" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>`;
+    d.onclick=()=>openClass(cls.id);
+    el.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// CLASS DETAIL
+// ══════════════════════════════════════════════
+function openClass(classId){
+  currentClassId=classId; selectedDate=today(); selectedTime=null; bookingMode='solo'; bookedId=null;
+  const found=getClassById(classId);
+  if(!found)return;
+  const{cls,creator}=found;
+  const lc=LEVEL_COLORS[cls.level]||'#888';
+  const h=document.getElementById('class-header');
+  h.style.background=creator.color+'12'; h.style.borderBottomColor=creator.color+'40';
+  const lp=document.getElementById('cls-level');
+  lp.textContent=cls.level.toUpperCase(); lp.style.color=lc; lp.style.borderColor=lc+'50'; lp.style.background=lc+'15';
+  document.getElementById('cls-name').textContent=cls.name;
+  document.getElementById('cls-creator').textContent=creator.name;
+  document.getElementById('cls-dur').textContent=cls.dur||cls.duration||'—';
+  document.getElementById('cls-desc').textContent=cls.desc||cls.description||'';
+  document.getElementById('cls-yt').href=cls.url||cls.youtubeUrl||'#';
+  document.getElementById('class-back').onclick=()=>showView(currentCreatorId?'v-creator':'v-home');
+  const me=USERS[currentUser], bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  document.getElementById('mode-me').textContent=me.name;
+  document.getElementById('mode-bestie').textContent=bestie.name;
+  renderDateScroll(); renderTimeGrid(); renderModeButtons(); renderBookBar();
+  showView('v-class');
+}
+
+function renderDateScroll(){
+  const el=document.getElementById('date-scroll'); el.innerHTML='';
+  getNext7().forEach(d=>{
+    const ds=fmtDate(d),btn=document.createElement('div');
+    btn.className='date-pill'+(selectedDate===ds?' selected':'');
+    btn.innerHTML=`<span class="date-day">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="date-num">${d.getDate()}</span>`;
+    btn.onclick=()=>{selectedDate=ds;selectedTime=null;renderDateScroll();renderTimeGrid();renderBookBar()};
+    el.appendChild(btn);
+  });
+}
+
+function renderTimeGrid(){
+  const el=document.getElementById('time-grid'); el.innerHTML='';
+  const found=getClassById(currentClassId);
+  TIME_SLOTS.forEach(ts=>{
+    const taken=found&&bookings.some(b=>b.class_id===found.cls.id&&b.date===selectedDate&&b.time===ts&&!b.canceled);
+    const past=isTimePast(selectedDate,ts);
+    const dis=taken||past;
+    const btn=document.createElement('div');
+    btn.className='time-slot'+(dis?' disabled':'')+(selectedTime===ts&&!dis?' selected':'');
+    btn.textContent=ts+(taken?' ✕':past?' ⏱':'');
+    if(!dis)btn.onclick=()=>{selectedTime=ts;renderTimeGrid();renderBookBar()};
+    el.appendChild(btn);
+  });
+}
+
+function renderModeButtons(){
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  document.getElementById('mode-bestie').textContent=bestie.name;
+  ['solo','together','invite'].forEach(m=>document.getElementById('mode-'+m).classList.toggle('active',bookingMode===m));
+  const hints={solo:'',together:'Both Kelsey & Elizabeth will be booked (+100 pts each)',invite:`You'll be booked and ${bestie.name} will get an invitation to join`};
+  document.getElementById('mode-hint').textContent=hints[bookingMode];
+}
+
+function setMode(m){bookingMode=m;renderModeButtons();renderBookBar()}
+
+function renderBookBar(){
+  const pre=document.getElementById('book-pre'),conf=document.getElementById('book-confirmed');
+  if(bookedId){pre.style.display='none';conf.style.display='block';document.getElementById('confirmed-text').textContent=`Booked for ${displayDate(selectedDate)} at ${selectedTime}`;document.getElementById('done-btn').onclick=()=>showView(currentCreatorId?'v-creator':'v-home');return}
+  pre.style.display='block';conf.style.display='none';
+  const btn=document.getElementById('book-btn'),txt=document.getElementById('book-btn-txt'),si=document.getElementById('sel-info');
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  if(selectedTime){
+    si.textContent=`${displayDate(selectedDate)} · ${selectedTime}`;
+    btn.className='book-btn ready';
+    txt.textContent=bookingMode==='together'?'Book for Both · 100 pts each':bookingMode==='invite'?`Book + Invite ${bestie.name}`:'Book Class · 100 pts';
+  }else{si.textContent='';btn.className='book-btn disabled';txt.textContent='Book Class · 100 pts'}
+}
+
+async function handleBook(){
+  if(!selectedTime){showToast('Pick a time slot first');return}
+  const found=getClassById(currentClassId);
+  if(!found)return;
+  const{cls,creator}=found;
+  const base={class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,date:selectedDate,time:selectedTime,canceled:false};
+  if(bookingMode==='together'){
+    const id1=uid(),id2=uid();
+    await sb.from('bookings').insert([{...base,id:id1,user_id:'kelsey'},{...base,id:id2,user_id:'elizabeth'}]);
+    bookedId=id1;
+    showToast('Booked for both! 🎉 +100 pts each');
+  }else if(bookingMode==='invite'){
+    const id1=uid();
+    await sb.from('bookings').insert({...base,id:id1,user_id:currentUser});
+    const bestieId=currentUser==='kelsey'?'elizabeth':'kelsey';
+    await sb.from('invitations').insert({id:uid(),class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,from_user_id:currentUser,to_user_id:bestieId,date:selectedDate,time:selectedTime,status:'pending'});
+    bookedId=id1;
+    showToast(`Booked + invite sent to ${USERS[bestieId].name}! ✉️`);
+  }else{
+    const id1=uid();
+    await sb.from('bookings').insert({...base,id:id1,user_id:currentUser});
+    bookedId=id1;
+    showToast('Class booked! 💪 +100 pts');
+  }
+  renderBookBar();
+}
+
+// ══════════════════════════════════════════════
+// SCHEDULE
+// ══════════════════════════════════════════════
+function schedTab(tab){
+  scheduleTab=tab;
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  const mine=document.getElementById('sched-tab-mine');
+  const bt=document.getElementById('sched-tab-bestie');
+  if(tab==='mine'){
+    mine.style.background='var(--rose)';mine.style.borderColor='var(--rose)';mine.style.color='#fff';
+    bt.style.background='var(--subtle)';bt.style.borderColor='var(--border)';bt.style.color='var(--muted)';
+  }else{
+    bt.style.background=bestie.color;bt.style.borderColor=bestie.color;bt.style.color='#fff';
+    mine.style.background='var(--subtle)';mine.style.borderColor='var(--border)';mine.style.color='var(--muted)';
+  }
+  renderScheduleList();
+}
+
+function renderSchedule(){
+  const u=USERS[currentUser],bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  const sp=document.getElementById('sched-pill');
+  sp.style.background=u.color+'18';sp.style.borderColor=u.color+'40';sp.style.color=u.color;
+  sp.querySelector('.user-dot').style.background=u.color;
+  document.getElementById('sched-name').textContent=u.name;
+  document.getElementById('sched-tab-bestie').textContent=`${bestie.name}'s Classes`;
+  schedTab(scheduleTab);
+}
+
+function renderScheduleList(){
+  const viewUser=scheduleTab==='mine'?currentUser:(currentUser==='kelsey'?'elizabeth':'kelsey');
+  const u=USERS[viewUser];
+  const bks=getUpcoming(viewUser);
+  document.getElementById('sched-sub').textContent=`${bks.length} upcoming ${bks.length===1?'class':'classes'}`;
+  const body=document.getElementById('schedule-body'); body.innerHTML='';
+  if(bks.length===0){body.innerHTML=`<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No classes yet</div><div class="empty-sub">${scheduleTab==='mine'?'Head to Classes to book your first workout!':`${u.name} hasn't booked anything yet.`}</div></div>`;return}
+  const grouped={};
+  bks.forEach(b=>{if(!grouped[b.date])grouped[b.date]=[];grouped[b.date].push(b)});
+  Object.entries(grouped).forEach(([date,dayBks])=>{
+    const grp=document.createElement('div'); grp.className='day-group';
+    grp.innerHTML=`<div class="day-label-row"><div class="day-dot" style="background:${u.color}"></div><div class="day-label">${displayDate(date)}</div></div>`;
+    dayBks.forEach(bk=>{
+      const bc=document.createElement('div'); bc.className='booking-card';
+      const bkReactions=reactions.filter(r=>r.booking_id===bk.id);
+      const bkComments=comments.filter(c=>c.booking_id===bk.id);
+      const myReaction=bkReactions.find(r=>r.from_user_id===currentUser);
+      const reactionsHtml=bkReactions.length?bkReactions.map(r=>`<span class="reaction-btn${r.from_user_id===currentUser?' mine':''}" onclick="toggleReaction('${bk.id}','${r.emoji}')">${r.emoji} <span style="font-size:10px;color:var(--muted)">${USERS[r.from_user_id]?.name||r.from_user_id}</span></span>`).join(''):'';
+      const commentsHtml=bkComments.map(c=>`<div class="comment-item"><span class="comment-user" style="color:${USERS[c.user_id]?.color||'var(--text)'}">${USERS[c.user_id]?.name||c.user_id}: </span>${c.text}</div>`).join('');
+      bc.innerHTML=`<div class="booking-card-top">
+          <div class="time-badge" style="background:${u.color}18;color:${u.color}">${bk.time}</div>
+          <div class="booking-info"><div class="booking-class-name">${bk.class_name}</div><div class="booking-creator">${bk.creator_name}</div></div>
+          <div class="booking-right">
+            <div class="price-badge">$5</div>
+            ${scheduleTab==='mine'?`<button class="cancel-btn" onclick="promptCancel('${bk.id}','${bk.class_name.replace(/'/g,"\\'")}')">✕</button>`:''}
+          </div>
+        </div>
+        <div class="reaction-row">
+          ${reactionsHtml}
+          ${!myReaction?`<button class="add-reaction-btn" onclick="openEmojiPicker('${bk.id}')">+ React</button>`:''}
+        </div>
+        <div class="comment-area">
+          ${commentsHtml}
+          <div class="comment-input-row">
+            <input class="comment-input" id="ci-${bk.id}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')postComment('${bk.id}')">
+            <button class="comment-send" onclick="postComment('${bk.id}')">Send</button>
+          </div>
+        </div>`;
+      grp.appendChild(bc);
+    });
+    body.appendChild(grp);
+  });
+}
+
+function promptCancel(id,name){
+  pendingCancelId=id;
+  document.getElementById('cancel-body').textContent=`Remove "${name}" from your schedule?`;
+  document.getElementById('cancel-confirm-btn').onclick=async()=>{
+    await sb.from('bookings').update({canceled:true}).eq('id',pendingCancelId);
+    closeModal('cancel-modal'); showToast('Class cancelled');
+  };
+  openModal('cancel-modal');
+}
+
+// ══════════════════════════════════════════════
+// REACTIONS & COMMENTS
+// ══════════════════════════════════════════════
+function openEmojiPicker(bookingId){currentEmojiBookingId=bookingId;openModal('emoji-modal')}
+async function pickEmoji(emoji){
+  if(!currentEmojiBookingId)return;
+  closeModal('emoji-modal');
+  const existing=reactions.find(r=>r.booking_id===currentEmojiBookingId&&r.from_user_id===currentUser);
+  if(existing){await sb.from('reactions').update({emoji}).eq('id',existing.id)}
+  else{await sb.from('reactions').insert({id:uid(),booking_id:currentEmojiBookingId,from_user_id:currentUser,emoji})}
+  showToast('Reaction added '+emoji);
+}
+async function toggleReaction(bookingId,emoji){
+  const existing=reactions.find(r=>r.booking_id===bookingId&&r.from_user_id===currentUser);
+  if(existing){await sb.from('reactions').delete().eq('id',existing.id);showToast('Reaction removed')}
+  else{await sb.from('reactions').insert({id:uid(),booking_id:bookingId,from_user_id:currentUser,emoji});showToast('Reaction added '+emoji)}
+}
+async function postComment(bookingId){
+  const inp=document.getElementById('ci-'+bookingId);
+  const text=inp.value.trim(); if(!text)return;
+  await sb.from('comments').insert({id:uid(),booking_id:bookingId,user_id:currentUser,text});
+  inp.value='';
+}
+
+// ══════════════════════════════════════════════
+// ACTIVITY (INVITATIONS)
+// ══════════════════════════════════════════════
+function renderActivity(){
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  document.getElementById('activity-sub').textContent=`Your activity with ${bestie.name}`;
+  const body=document.getElementById('activity-body'); body.innerHTML='';
+  const pending=invitations.filter(i=>i.to_user_id===currentUser&&i.status==='pending');
+  const sent=invitations.filter(i=>i.from_user_id===currentUser);
+  if(pending.length===0&&sent.length===0){
+    body.innerHTML=`<div class="empty-state"><div class="empty-icon">💌</div><div class="empty-title">No activity yet</div><div class="empty-sub">When ${bestie.name} invites you to a class, it'll show up here.</div></div>`;
+    return;
+  }
+  if(pending.length){
+    const lbl=document.createElement('div'); lbl.className='section-label'; lbl.textContent='Invitations for You';
+    body.appendChild(lbl);
+    pending.forEach(inv=>{
+      const from=USERS[inv.from_user_id];
+      const card=document.createElement('div'); card.className='invite-card';
+      card.innerHTML=`<div class="invite-from" style="color:${from.color}">Invite from ${from.name}</div>
+        <div class="invite-class">${inv.class_name}</div>
+        <div class="invite-meta">${inv.creator_name} · ${displayDate(inv.date)} at ${inv.time}</div>
+        <div class="invite-actions">
+          <button class="invite-btn accept" onclick="acceptInvite('${inv.id}','${inv.class_id}','${inv.creator_id}','${inv.class_name.replace(/'/g,"\\'")}','${inv.creator_name.replace(/'/g,"\\'")}','${inv.date}','${inv.time}')">✅ Join!</button>
+          <button class="invite-btn decline" onclick="declineInvite('${inv.id}')">Decline</button>
+        </div>`;
+      body.appendChild(card);
+    });
+  }
+  if(sent.length){
+    const lbl=document.createElement('div'); lbl.className='section-label'; lbl.style.marginTop='12px'; lbl.textContent='Invites You Sent';
+    body.appendChild(lbl);
+    sent.forEach(inv=>{
+      const to=USERS[inv.to_user_id];
+      const card=document.createElement('div'); card.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px';
+      const statusColor=inv.status==='accepted'?'var(--green)':inv.status==='declined'?'var(--red)':'var(--gold)';
+      card.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${to.color};margin-bottom:3px">Invited ${to.name}</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:2px">${inv.class_name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${displayDate(inv.date)} at ${inv.time}</div>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${statusColor}20;color:${statusColor}">${inv.status.toUpperCase()}</span>`;
+      body.appendChild(card);
+    });
+  }
+}
+
+async function acceptInvite(invId,classId,creatorId,className,creatorName,date,time){
+  await sb.from('bookings').insert({id:uid(),class_id:classId,creator_id:creatorId,class_name:className,creator_name:creatorName,user_id:currentUser,date,time,canceled:false});
+  await sb.from('invitations').update({status:'accepted'}).eq('id',invId);
+  showToast('Joined! 🎉 +100 pts');
+}
+async function declineInvite(invId){
+  await sb.from('invitations').update({status:'declined'}).eq('id',invId);
+  showToast('Invitation declined');
+}
+
+// ══════════════════════════════════════════════
+// STEPS
+// ══════════════════════════════════════════════
+function renderSteps(){
+  const sc=document.getElementById('step-cards'); sc.innerHTML='';
+  ['kelsey','elizabeth'].forEach(uid=>{
+    const u=USERS[uid],steps=getTodaySteps(uid),pct=Math.min(steps/7000,1),met=pct>=1;
+    const card=document.createElement('div'); card.className='step-card'+(met?' goal-met':'');
+    if(met)card.style.borderColor=u.color;
+    card.innerHTML=(met?`<div class="goal-banner" style="background:${u.color}">🏆 GOAL REACHED · +25 PTS</div>`:'')
+      +`<div class="step-header"><div class="user-dot" style="background:${u.color};width:9px;height:9px;border-radius:50%"></div><div class="step-name">${u.name}</div><div class="step-count" style="color:${u.color}">${steps.toLocaleString()}</div></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct*100}%;background:${u.color}"></div></div>
+      <div class="progress-labels"><span style="color:${met?u.color:'var(--muted)'};font-weight:${met?700:400}">${Math.round(pct*100)}% of goal</span><span>7,000 steps</span></div>
+      ${met?`<div style="text-align:center;font-size:16px;padding-bottom:9px">👟 👟 👟</div>`:''}`;
+    sc.appendChild(card);
+  });
+  const lc=document.getElementById('log-cards'); lc.innerHTML='';
+  ['kelsey','elizabeth'].forEach(uid=>{
+    const u=USERS[uid];
+    const card=document.createElement('div'); card.className='log-card';
+    card.innerHTML=`<div class="log-header"><div class="user-dot" style="background:${u.color};width:9px;height:9px;border-radius:50%"></div><div class="log-name">${u.name}</div>
+      <button class="reset-btn" onclick="resetSteps('${uid}')">🔄</button></div>
+      <div class="quick-row">${[1000,2000,3000,5000].map(a=>`<button class="quick-btn" style="color:${u.color};border-color:${u.color}30;background:${u.color}10" onclick="quickAdd('${uid}',${a})">+${a>=1000?a/1000+'k':a}</button>`).join('')}</div>
+      <div class="input-row">
+        <input class="step-input" id="si-${uid}" type="number" placeholder="Enter steps..." min="1">
+        <button class="add-btn" style="background:${u.color}" onclick="manualAdd('${uid}')">+</button>
+      </div>`;
+    lc.appendChild(card);
+    card.querySelector(`#si-${uid}`).addEventListener('keydown',e=>{if(e.key==='Enter')manualAdd(uid)});
+  });
+}
+
+async function quickAdd(userId,amt){
+  const t=today();
+  const existing=stepLogs.find(s=>s.date===t&&s.user_id===userId);
+  if(existing){await sb.from('step_logs').update({steps:Math.max(0,existing.steps+amt)}).eq('id',existing.id)}
+  else{await sb.from('step_logs').insert({id:uid(),date:t,user_id:userId,steps:Math.max(0,amt)})}
+}
+async function manualAdd(userId){
+  const inp=document.getElementById('si-'+userId);
+  const v=parseInt(inp.value); if(isNaN(v)||v<=0)return;
+  inp.value=''; await quickAdd(userId,v);
+}
+async function resetSteps(userId){
+  const t=today(),existing=stepLogs.find(s=>s.date===t&&s.user_id===userId);
+  if(existing){await sb.from('step_logs').update({steps:0}).eq('id',existing.id);showToast('Steps reset')}
+}
+
+// ══════════════════════════════════════════════
+// PRIZE
+// ══════════════════════════════════════════════
+function renderPrize(){
+  document.getElementById('prize-month').textContent=fmtYM(getCurrentYM()).toUpperCase();
+  document.getElementById('days-left').textContent=daysEOM();
+  const maxTier=PRIZE_TIERS[PRIZE_TIERS.length-1].points;
+  document.getElementById('tiers-row').innerHTML=PRIZE_TIERS.map((t,i)=>`${i?'<div class="tier-divider"></div>':''}<div class="tier-item"><div class="tier-emoji-lg">${t.emoji}</div><div class="tier-pts">${t.points}</div><div class="tier-name-sm">${t.name}</div></div>`).join('');
+  const kp=getMonthlyBreakdown('kelsey').total,ep=getMonthlyBreakdown('elizabeth').total;
+  const winner=kp===0&&ep===0?null:kp>ep?'kelsey':ep>kp?'elizabeth':'tie';
+  const wa=document.getElementById('winner-area'); wa.innerHTML='';
+  if(winner){const wc=winner==='tie'?'var(--gold)':USERS[winner].color;wa.innerHTML=`<div class="winner-card" style="border-color:${wc}60;background:${wc}10;margin-top:10px"><span style="font-size:20px">🏆</span><div><div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Currently Leading</div><div style="font-size:16px;font-weight:700;color:${wc}">${winner==='tie'?"It's a tie!":USERS[winner].name+' is winning!'}</div></div></div>`}
+  const pc=document.getElementById('prize-cards'); pc.innerHTML='';
+  ['kelsey','elizabeth'].forEach(uid=>{
+    const u=USERS[uid],pts=uid==='kelsey'?kp:ep,bd=getMonthlyBreakdown(uid),isW=winner===uid;
+    const tier=PRIZE_TIERS.filter(t=>pts>=t.points).pop();
+    const nextTier=PRIZE_TIERS.find(t=>pts<t.points);
+    const prog=Math.min(pts/maxTier,1);
+    let bdr='';
+    if(bd.classPoints)bdr+=`<div class="breakdown-row"><span class="breakdown-label">${Math.floor(bd.classPoints/100)} class${bd.classPoints/100!==1?'es':''}</span><span class="breakdown-value" style="color:var(--green)">+${bd.classPoints}</span></div>`;
+    if(bd.stepsBonus)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Steps bonus</span><span class="breakdown-value" style="color:var(--green)">+${bd.stepsBonus}</span></div>`;
+    if(bd.cancelPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Cancellations</span><span class="breakdown-value" style="color:var(--red)">−${bd.cancelPenalty}</span></div>`;
+    if(bd.weeklyPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Missed weeks</span><span class="breakdown-value" style="color:var(--red)">−${bd.weeklyPenalty}</span></div>`;
+    if(!bdr)bdr='<span style="font-size:11px;color:var(--muted);font-style:italic">No activity yet</span>';
+    const card=document.createElement('div'); card.className='user-card';
+    if(isW)card.style.borderColor=u.color;
+    card.innerHTML=(isW?`<div class="goal-banner" style="background:${u.color}">🏆 LEADING</div>`:'')
+      +`<div class="user-card-header"><div class="user-dot" style="background:${u.color};width:9px;height:9px;border-radius:50%"></div><div class="user-card-name">${u.name}</div><div class="points-bubble" style="color:${u.color};border-color:${u.color}40;background:${u.color}18">${pts.toLocaleString()} pts</div></div>
+      <div style="padding:0 14px 8px"><div style="height:7px;border-radius:4px;background:var(--subtle);overflow:hidden"><div style="height:100%;border-radius:4px;background:${u.color};width:${prog*100}%;transition:width .4s"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">${PRIZE_TIERS.map(t=>`<span style="font-size:13px;opacity:${pts>=t.points?1:.2}">${t.emoji}</span>`).join('')}</div></div>
+      ${tier?`<div style="display:flex;align-items:center;gap:9px;margin:0 13px 9px;border-radius:7px;border:1px solid ${u.color}30;background:${u.color}10;padding:10px"><span style="font-size:20px">${tier.emoji}</span><div><div style="font-size:12px;font-weight:700">${tier.name}</div><div style="font-size:10px;color:var(--muted);line-height:1.4">${tier.desc}</div></div></div>`:`<div style="font-size:11px;color:var(--muted);margin:0 13px 9px;font-style:italic">Reach 500 pts to unlock your first prize 🎯</div>`}
+      ${nextTier?`<div style="font-size:11px;color:var(--muted);margin:0 13px 10px;font-weight:500">${nextTier.points-pts} pts away from ${nextTier.emoji} ${nextTier.name}</div>`:pts>0?`<div style="font-size:11px;color:var(--green);margin:0 13px 10px;font-weight:700">Maximum tier unlocked! 🏆</div>`:''}
+      <div class="breakdown-card"><div class="breakdown-title">Breakdown</div>${bdr}<div style="height:1px;background:var(--border);margin:3px 0"></div><div class="breakdown-row"><span class="breakdown-label" style="font-weight:700;color:var(--text)">Total</span><span class="breakdown-value" style="color:${u.color};font-size:13px">${pts}</span></div></div>`;
+    pc.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════
+// CUSTOM CLASS
+// ══════════════════════════════════════════════
+function openCustomModal(){
+  const cr=CREATORS.find(c=>c.id===currentCreatorId);
+  customCreatorId=currentCreatorId;
+  document.getElementById('custom-modal-title').textContent=`Custom ${cr.name} Video`;
+  document.getElementById('c-url').value='';
+  document.getElementById('c-name-inp').value='';
+  document.getElementById('c-dur').value='';
+  openModal('custom-modal');
+}
+async function saveCustomClass(){
+  const url=document.getElementById('c-url').value.trim();
+  const name=document.getElementById('c-name-inp').value.trim();
+  const dur=parseInt(document.getElementById('c-dur').value)||30;
+  if(!url||!name){showToast('Please fill in URL and class name');return}
+  const cr=CREATORS.find(c=>c.id===customCreatorId);
+  const cc={id:'custom-'+uid(),creator_id:customCreatorId,creator_name:cr.name,name,duration:dur,youtube_url:url,created_by:currentUser};
+  await sb.from('custom_classes').insert(cc);
+  customClasses.push(cc);
+  closeModal('custom-modal');
+  openClass(cc.id);
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+async function init(){
+  if(currentUser){
+    scheduleViewUser=currentUser;
+    await loadAll();
+    subscribeRealtime();
+    document.getElementById('loading').classList.add('hide');
+    document.getElementById('v-login').classList.remove('active');
+    renderHome();
+    showView('v-home');
+    updateUserUI();
+    updateActivityBadge();
+  }else{
+    document.getElementById('loading').classList.add('hide');
+    document.getElementById('v-login').classList.add('active');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
