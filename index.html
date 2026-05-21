@@ -396,8 +396,26 @@ button,input,select,textarea{font-family:inherit}
     </div>
     <div style="display:flex;gap:6px;margin-top:10px">
       <button id="sched-tab-mine" onclick="schedTab('mine')" style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--rose);background:var(--rose);color:#fff;font-size:11px;font-weight:700;cursor:pointer">My Classes</button>
-      <button id="sched-tab-bestie" onclick="schedTab('bestie')" style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer" id="bestie-sched-btn"></button>
+      <button id="sched-tab-bestie" onclick="schedTab('bestie')" style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">Kelsey's Classes</button>
     </div>
+  </div>
+  <!-- MINI CALENDAR -->
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:12px 14px 10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="calPrev()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:2px 6px">‹</button>
+      <div id="cal-month-label" style="font-size:13px;font-weight:700;letter-spacing:.5px"></div>
+      <button onclick="calNext()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:2px 6px">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Su</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Mo</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Tu</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">We</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Th</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Fr</div>
+      <div style="font-size:9px;font-weight:700;text-align:center;color:var(--muted);padding:2px">Sa</div>
+    </div>
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
   </div>
   <div class="scroll-body" id="schedule-body"></div>
 </div>
@@ -788,7 +806,7 @@ function navTo(viewId,navId){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById(navId).classList.add('active');
   if(viewId==='v-home')renderHome();
-  if(viewId==='v-schedule'){scheduleViewUser=currentUser;scheduleTab='mine';renderSchedule()}
+  if(viewId==='v-schedule'){scheduleViewUser=currentUser;scheduleTab='mine';calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderSchedule()}
   if(viewId==='v-activity')renderActivity();
   if(viewId==='v-steps')renderSteps();
   if(viewId==='v-prize')renderPrize();
@@ -979,41 +997,112 @@ async function handleBook(){
   const base={class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,date:selectedDate,time:selectedTime,canceled:false};
   if(bookingMode==='together'){
     const id1=uid(),id2=uid();
-    await sb.from('bookings').insert([{...base,id:id1,user_id:'kelsey'},{...base,id:id2,user_id:'elizabeth'}]);
+    const b1={...base,id:id1,user_id:'kelsey'};
+    const b2={...base,id:id2,user_id:'elizabeth'};
+    const {error}=await sb.from('bookings').insert([b1,b2]);
+    if(error){showToast('Error booking — try again');console.error(error);return}
+    bookings=[b1,b2,...bookings];
     bookedId=id1;
     showToast('Booked for both! 🎉 +100 pts each');
   }else if(bookingMode==='invite'){
     const id1=uid();
-    await sb.from('bookings').insert({...base,id:id1,user_id:currentUser});
+    const b1={...base,id:id1,user_id:currentUser};
+    const {error}=await sb.from('bookings').insert(b1);
+    if(error){showToast('Error booking — try again');console.error(error);return}
+    bookings=[b1,...bookings];
     const bestieId=currentUser==='kelsey'?'elizabeth':'kelsey';
-    await sb.from('invitations').insert({id:uid(),class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,from_user_id:currentUser,to_user_id:bestieId,date:selectedDate,time:selectedTime,status:'pending'});
+    const newInv={id:uid(),class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,from_user_id:currentUser,to_user_id:bestieId,date:selectedDate,time:selectedTime,status:'pending'};
+    await sb.from('invitations').insert(newInv);
+    invitations=[newInv,...invitations];
+    updateActivityBadge();
     bookedId=id1;
     showToast(`Booked + invite sent to ${USERS[bestieId].name}! ✉️`);
   }else{
     const id1=uid();
-    await sb.from('bookings').insert({...base,id:id1,user_id:currentUser});
+    const b1={...base,id:id1,user_id:currentUser};
+    const {error}=await sb.from('bookings').insert(b1);
+    if(error){showToast('Error booking — try again');console.error(error);return}
+    bookings=[b1,...bookings];
     bookedId=id1;
     showToast('Class booked! 💪 +100 pts');
   }
+  updateUserUI();
   renderBookBar();
 }
 
 // ══════════════════════════════════════════════
 // SCHEDULE
 // ══════════════════════════════════════════════
+// ── MINI CALENDAR ──
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
+
+function renderCalendar(){
+  const now=new Date();
+  const viewUser=scheduleTab==='mine'?currentUser:(currentUser==='kelsey'?'elizabeth':'kelsey');
+  const u=USERS[viewUser];
+  const label=new Date(calYear,calMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('cal-month-label').textContent=label;
+  const grid=document.getElementById('cal-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const todayStr=today();
+  // booked dates for this user this month
+  const ym=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const bookedDates=new Set(bookings.filter(b=>b.user_id===viewUser&&!b.canceled&&b.date.startsWith(ym)).map(b=>b.date));
+  // blank leading cells
+  for(let i=0;i<firstDay;i++){
+    const cell=document.createElement('div');
+    cell.style.cssText='padding:3px;text-align:center;font-size:12px;';
+    grid.appendChild(cell);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const hasClass=bookedDates.has(ds);
+    const cell=document.createElement('div');
+    cell.style.cssText=`padding:3px;text-align:center;font-size:12px;font-weight:${isToday?700:400};border-radius:50%;cursor:${hasClass?'pointer':'default'};position:relative;`;
+    if(isToday&&!hasClass){cell.style.background='var(--subtle)';cell.style.borderRadius='50%'}
+    if(hasClass){
+      cell.style.background=u.color;cell.style.color='#fff';cell.style.borderRadius='50%';cell.style.fontWeight='700';
+      cell.title='Class booked!';
+      cell.onclick=()=>{
+        // scroll to that day in list
+        scheduleTab='mine';
+        renderScheduleList();
+        setTimeout(()=>{
+          const body=document.getElementById('schedule-body');
+          const target=body.querySelector(`[data-date="${ds}"]`);
+          if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+        },100);
+      };
+    }
+    cell.textContent=d;
+    grid.appendChild(cell);
+  }
+}
+
+function calPrev(){if(calMonth===0){calMonth=11;calYear--}else{calMonth--}renderCalendar()}
+function calNext(){if(calMonth===11){calMonth=0;calYear++}else{calMonth++}renderCalendar()}
+
 function schedTab(tab){
   scheduleTab=tab;
   const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
   const mine=document.getElementById('sched-tab-mine');
   const bt=document.getElementById('sched-tab-bestie');
-  if(tab==='mine'){
-    mine.style.background='var(--rose)';mine.style.borderColor='var(--rose)';mine.style.color='#fff';
-    bt.style.background='var(--subtle)';bt.style.borderColor='var(--border)';bt.style.color='var(--muted)';
-  }else{
-    bt.style.background=bestie.color;bt.style.borderColor=bestie.color;bt.style.color='#fff';
-    mine.style.background='var(--subtle)';mine.style.borderColor='var(--border)';mine.style.color='var(--muted)';
+  if(mine&&bt){
+    if(tab==='mine'){
+      mine.style.background='var(--rose)';mine.style.borderColor='var(--rose)';mine.style.color='#fff';
+      bt.style.background='var(--subtle)';bt.style.borderColor='var(--border)';bt.style.color='var(--muted)';
+    }else{
+      bt.style.background=bestie.color;bt.style.borderColor=bestie.color;bt.style.color='#fff';
+      mine.style.background='var(--subtle)';mine.style.borderColor='var(--border)';mine.style.color='var(--muted)';
+    }
   }
   renderScheduleList();
+  renderCalendar();
 }
 
 function renderSchedule(){
@@ -1022,8 +1111,10 @@ function renderSchedule(){
   sp.style.background=u.color+'18';sp.style.borderColor=u.color+'40';sp.style.color=u.color;
   sp.querySelector('.user-dot').style.background=u.color;
   document.getElementById('sched-name').textContent=u.name;
-  document.getElementById('sched-tab-bestie').textContent=`${bestie.name}'s Classes`;
+  const bt=document.getElementById('sched-tab-bestie');
+  if(bt)bt.textContent=`${bestie.name}'s Classes`;
   schedTab(scheduleTab);
+  renderCalendar();
 }
 
 function renderScheduleList(){
@@ -1037,6 +1128,7 @@ function renderScheduleList(){
   bks.forEach(b=>{if(!grouped[b.date])grouped[b.date]=[];grouped[b.date].push(b)});
   Object.entries(grouped).forEach(([date,dayBks])=>{
     const grp=document.createElement('div'); grp.className='day-group';
+    grp.setAttribute('data-date',date);
     grp.innerHTML=`<div class="day-label-row"><div class="day-dot" style="background:${u.color}"></div><div class="day-label">${displayDate(date)}</div></div>`;
     dayBks.forEach(bk=>{
       const bc=document.createElement('div'); bc.className='booking-card';
@@ -1049,7 +1141,7 @@ function renderScheduleList(){
           <div class="time-badge" style="background:${u.color}18;color:${u.color}">${bk.time}</div>
           <div class="booking-info"><div class="booking-class-name">${bk.class_name}</div><div class="booking-creator">${bk.creator_name}</div></div>
           <div class="booking-right">
-            <div class="price-badge">$5</div>
+            
             ${scheduleTab==='mine'?`<button class="cancel-btn" onclick="promptCancel('${bk.id}','${bk.class_name.replace(/'/g,"\\'")}')">✕</button>`:''}
           </div>
         </div>
@@ -1150,12 +1242,22 @@ function renderActivity(){
 }
 
 async function acceptInvite(invId,classId,creatorId,className,creatorName,date,time){
-  await sb.from('bookings').insert({id:uid(),class_id:classId,creator_id:creatorId,class_name:className,creator_name:creatorName,user_id:currentUser,date,time,canceled:false});
+  const newBooking={id:uid(),class_id:classId,creator_id:creatorId,class_name:className,creator_name:creatorName,user_id:currentUser,date,time,canceled:false};
+  const {error}=await sb.from('bookings').insert(newBooking);
+  if(error){showToast('Error joining — try again');return;}
+  bookings=[newBooking,...bookings];
   await sb.from('invitations').update({status:'accepted'}).eq('id',invId);
+  invitations=invitations.map(i=>i.id===invId?{...i,status:'accepted'}:i);
+  updateActivityBadge();
+  renderActivity();
+  updateUserUI();
   showToast('Joined! 🎉 +100 pts');
 }
 async function declineInvite(invId){
   await sb.from('invitations').update({status:'declined'}).eq('id',invId);
+  invitations=invitations.map(i=>i.id===invId?{...i,status:'declined'}:i);
+  updateActivityBadge();
+  renderActivity();
   showToast('Invitation declined');
 }
 
@@ -1194,17 +1296,36 @@ function renderSteps(){
 async function quickAdd(userId,amt){
   const t=today();
   const existing=stepLogs.find(s=>s.date===t&&s.user_id===userId);
-  if(existing){await sb.from('step_logs').update({steps:Math.max(0,existing.steps+amt)}).eq('id',existing.id)}
-  else{await sb.from('step_logs').insert({id:uid(),date:t,user_id:userId,steps:Math.max(0,amt)})}
+  const newSteps=Math.max(0,(existing?existing.steps:0)+amt);
+  if(existing){
+    const {error}=await sb.from('step_logs').update({steps:newSteps}).eq('id',existing.id);
+    if(!error)stepLogs=stepLogs.map(s=>s.id===existing.id?{...s,steps:newSteps}:s);
+  }else{
+    const newLog={id:uid(),date:t,user_id:userId,steps:Math.max(0,amt)};
+    const {error}=await sb.from('step_logs').insert(newLog);
+    if(!error)stepLogs=[...stepLogs,newLog];
+  }
+  renderSteps();
+  updateUserUI();
+  const cv=document.querySelector('.view.active')?.id;
+  if(cv==='v-prize')renderPrize();
 }
 async function manualAdd(userId){
   const inp=document.getElementById('si-'+userId);
-  const v=parseInt(inp.value); if(isNaN(v)||v<=0)return;
-  inp.value=''; await quickAdd(userId,v);
+  const v=parseInt(inp.value);
+  if(isNaN(v)||v<=0){showToast('Enter a number first');return;}
+  inp.value='';
+  await quickAdd(userId,v);
 }
 async function resetSteps(userId){
   const t=today(),existing=stepLogs.find(s=>s.date===t&&s.user_id===userId);
-  if(existing){await sb.from('step_logs').update({steps:0}).eq('id',existing.id);showToast('Steps reset')}
+  if(existing){
+    const {error}=await sb.from('step_logs').update({steps:0}).eq('id',existing.id);
+    if(!error){
+      stepLogs=stepLogs.map(s=>s.id===existing.id?{...s,steps:0}:s);
+      renderSteps();updateUserUI();showToast('Steps reset');
+    }
+  }else{showToast('No steps logged today yet');}
 }
 
 // ══════════════════════════════════════════════
