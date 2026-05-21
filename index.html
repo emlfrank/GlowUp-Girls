@@ -650,7 +650,7 @@ let scheduleTab = 'mine';
 // ══════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════
-function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5)}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5)}
 function fmtDate(d){return(d instanceof Date?d:new Date(d)).toISOString().split('T')[0]}
 function today(){return fmtDate(new Date())}
 function showToast(m,dur=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)}
@@ -996,7 +996,7 @@ async function handleBook(){
   const{cls,creator}=found;
   const base={class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,date:selectedDate,time:selectedTime,canceled:false};
   if(bookingMode==='together'){
-    const id1=uid(),id2=uid();
+    const id1=genId(),id2=genId();
     const b1={...base,id:id1,user_id:'kelsey'};
     const b2={...base,id:id2,user_id:'elizabeth'};
     const {error}=await sb.from('bookings').insert([b1,b2]);
@@ -1005,20 +1005,20 @@ async function handleBook(){
     bookedId=id1;
     showToast('Booked for both! 🎉 +100 pts each');
   }else if(bookingMode==='invite'){
-    const id1=uid();
+    const id1=genId();
     const b1={...base,id:id1,user_id:currentUser};
     const {error}=await sb.from('bookings').insert(b1);
     if(error){showToast('Error booking — try again');console.error(error);return}
     bookings=[b1,...bookings];
     const bestieId=currentUser==='kelsey'?'elizabeth':'kelsey';
-    const newInv={id:uid(),class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,from_user_id:currentUser,to_user_id:bestieId,date:selectedDate,time:selectedTime,status:'pending'};
+    const newInv={id:genId(),class_id:cls.id,creator_id:creator.id,class_name:cls.name,creator_name:creator.name,from_user_id:currentUser,to_user_id:bestieId,date:selectedDate,time:selectedTime,status:'pending'};
     await sb.from('invitations').insert(newInv);
     invitations=[newInv,...invitations];
     updateActivityBadge();
     bookedId=id1;
     showToast(`Booked + invite sent to ${USERS[bestieId].name}! ✉️`);
   }else{
-    const id1=uid();
+    const id1=genId();
     const b1={...base,id:id1,user_id:currentUser};
     const {error}=await sb.from('bookings').insert(b1);
     if(error){showToast('Error booking — try again');console.error(error);return}
@@ -1166,8 +1166,14 @@ function promptCancel(id,name){
   pendingCancelId=id;
   document.getElementById('cancel-body').textContent=`Remove "${name}" from your schedule?`;
   document.getElementById('cancel-confirm-btn').onclick=async()=>{
-    await sb.from('bookings').update({canceled:true}).eq('id',pendingCancelId);
-    closeModal('cancel-modal'); showToast('Class cancelled');
+    const {error}=await sb.from('bookings').update({canceled:true}).eq('id',pendingCancelId);
+    if(error){showToast('Error cancelling — try again');return;}
+    bookings=bookings.map(b=>b.id===pendingCancelId?{...b,canceled:true}:b);
+    closeModal('cancel-modal');
+    renderSchedule();
+    renderCalendar();
+    updateUserUI();
+    showToast('Class cancelled');
   };
   openModal('cancel-modal');
 }
@@ -1181,18 +1187,18 @@ async function pickEmoji(emoji){
   closeModal('emoji-modal');
   const existing=reactions.find(r=>r.booking_id===currentEmojiBookingId&&r.from_user_id===currentUser);
   if(existing){await sb.from('reactions').update({emoji}).eq('id',existing.id)}
-  else{await sb.from('reactions').insert({id:uid(),booking_id:currentEmojiBookingId,from_user_id:currentUser,emoji})}
+  else{await sb.from('reactions').insert({id:genId(),booking_id:currentEmojiBookingId,from_user_id:currentUser,emoji})}
   showToast('Reaction added '+emoji);
 }
 async function toggleReaction(bookingId,emoji){
   const existing=reactions.find(r=>r.booking_id===bookingId&&r.from_user_id===currentUser);
   if(existing){await sb.from('reactions').delete().eq('id',existing.id);showToast('Reaction removed')}
-  else{await sb.from('reactions').insert({id:uid(),booking_id:bookingId,from_user_id:currentUser,emoji});showToast('Reaction added '+emoji)}
+  else{await sb.from('reactions').insert({id:genId(),booking_id:bookingId,from_user_id:currentUser,emoji});showToast('Reaction added '+emoji)}
 }
 async function postComment(bookingId){
   const inp=document.getElementById('ci-'+bookingId);
   const text=inp.value.trim(); if(!text)return;
-  await sb.from('comments').insert({id:uid(),booking_id:bookingId,user_id:currentUser,text});
+  await sb.from('comments').insert({id:genId(),booking_id:bookingId,user_id:currentUser,text});
   inp.value='';
 }
 
@@ -1242,7 +1248,7 @@ function renderActivity(){
 }
 
 async function acceptInvite(invId,classId,creatorId,className,creatorName,date,time){
-  const newBooking={id:uid(),class_id:classId,creator_id:creatorId,class_name:className,creator_name:creatorName,user_id:currentUser,date,time,canceled:false};
+  const newBooking={id:genId(),class_id:classId,creator_id:creatorId,class_name:className,creator_name:creatorName,user_id:currentUser,date,time,canceled:false};
   const {error}=await sb.from('bookings').insert(newBooking);
   if(error){showToast('Error joining — try again');return;}
   bookings=[newBooking,...bookings];
@@ -1301,7 +1307,7 @@ async function quickAdd(userId,amt){
     const {error}=await sb.from('step_logs').update({steps:newSteps}).eq('id',existing.id);
     if(!error)stepLogs=stepLogs.map(s=>s.id===existing.id?{...s,steps:newSteps}:s);
   }else{
-    const newLog={id:uid(),date:t,user_id:userId,steps:Math.max(0,amt)};
+    const newLog={id:genId(),date:t,user_id:userId,steps:Math.max(0,amt)};
     const {error}=await sb.from('step_logs').insert(newLog);
     if(!error)stepLogs=[...stepLogs,newLog];
   }
@@ -1383,7 +1389,7 @@ async function saveCustomClass(){
   const dur=parseInt(document.getElementById('c-dur').value)||30;
   if(!url||!name){showToast('Please fill in URL and class name');return}
   const cr=CREATORS.find(c=>c.id===customCreatorId);
-  const cc={id:'custom-'+uid(),creator_id:customCreatorId,creator_name:cr.name,name,duration:dur,youtube_url:url,created_by:currentUser};
+  const cc={id:'custom-'+genId(),creator_id:customCreatorId,creator_name:cr.name,name,duration:dur,youtube_url:url,created_by:currentUser};
   await sb.from('custom_classes').insert(cc);
   customClasses.push(cc);
   closeModal('custom-modal');
