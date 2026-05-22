@@ -383,7 +383,7 @@ button,input,select,textarea{font-family:inherit}
     <div id="book-confirmed" style="display:none">
       <div class="confirmed-badge">✅ <span id="confirmed-text"></span></div>
       <div class="cal-btn-row">
-        <a class="cal-btn apple" id="cal-apple" href="#" target="_blank" rel="noopener">🍎 Add to Apple Calendar</a>
+        <button class="cal-btn apple" id="cal-apple" onclick="addToAppleCalendar('','','','')">🍎 Add to Apple Calendar</button>
         <a class="cal-btn google" id="cal-google" href="#" target="_blank" rel="noopener">📅 Add to Google Calendar</a>
       </div>
       <div class="action-row"><button class="action-btn primary" id="done-btn">Done →</button></div>
@@ -996,41 +996,54 @@ function renderModeButtons(){
 function setMode(m){bookingMode=m;renderModeButtons();renderBookBar()}
 
 function buildCalendarLinks(className,creatorName,dateStr,timeStr){
-  // Parse the time string e.g. "7:00 AM" into hours/minutes
   const [tp,ap]=timeStr.split(' ');
   const [h,m]=tp.split(':').map(Number);
   let hr=h;
   if(ap==='PM'&&hr!==12)hr+=12;
   if(ap==='AM'&&hr===12)hr=0;
   const [year,month,day]=dateStr.split('-').map(Number);
-  // Start time
   const start=new Date(year,month-1,day,hr,m||0,0);
-  // End time = start + 1 hour
   const end=new Date(start.getTime()+60*60*1000);
   const pad=n=>String(n).padStart(2,'0');
+  // Format for Google (local time)
   const fmtLocal=dt=>`${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
   const title=encodeURIComponent(`GlowUp Girls: ${className}`);
-  const details=encodeURIComponent(`${className} with ${creatorName} — booked on GlowUp Girls Studio`);
-  const location=encodeURIComponent('Home Workout');
-  // Google Calendar URL
-  const googleUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${details}&location=${location}`;
-  // Apple Calendar uses .ics file via data URI
-  const icsContent=[
+  const details=encodeURIComponent(`${className} with ${creatorName}`);
+  const loc=encodeURIComponent('Home Workout');
+  const googleUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${details}&location=${loc}`;
+  // Apple Calendar — build ICS and use blob URL (works on iOS Safari)
+  const icsLines=[
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
     'PRODID:-//GlowUp Girls Studio//EN',
     'BEGIN:VEVENT',
-    `DTSTART:${fmtLocal(start)}`,
-    `DTEND:${fmtLocal(end)}`,
-    `SUMMARY:GlowUp Girls: ${className}`,
-    `DESCRIPTION:${className} with ${creatorName}`,
+    'DTSTART;TZID=America/Los_Angeles:'+fmtLocal(start),
+    'DTEND;TZID=America/Los_Angeles:'+fmtLocal(end),
+    'SUMMARY:GlowUp Girls: '+className,
+    'DESCRIPTION:'+className+' with '+creatorName,
     'LOCATION:Home Workout',
-    `UID:${Date.now()}@glowupgirls`,
+    'UID:'+Date.now()+'@glowupgirls.app',
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');
-  const icsUrl='data:text/calendar;charset=utf-8,'+encodeURIComponent(icsContent);
-  return{googleUrl,icsUrl};
+  return{googleUrl,icsLines};
+}
+
+function addToAppleCalendar(className,creatorName,dateStr,timeStr){
+  const{icsLines}=buildCalendarLinks(className,creatorName,dateStr,timeStr);
+  // Use blob URL — works on iOS Safari and triggers native calendar prompt
+  const blob=new Blob([icsLines],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='glowup-class.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  showToast('Opening calendar… tap Allow to add 📅');
 }
 
 function renderBookBar(){
@@ -1042,11 +1055,14 @@ function renderBookBar(){
     // Build calendar links
     const found=getClassById(currentClassId);
     if(found&&selectedDate&&selectedTime){
-      const{googleUrl,icsUrl}=buildCalendarLinks(found.cls.name,found.creator.name,selectedDate,selectedTime);
+      const{googleUrl}=buildCalendarLinks(found.cls.name,found.creator.name,selectedDate,selectedTime);
       const gBtn=document.getElementById('cal-google');
       const aBtn=document.getElementById('cal-apple');
       if(gBtn)gBtn.href=googleUrl;
-      if(aBtn)aBtn.href=icsUrl;
+      if(aBtn){
+        // Pass actual class data to Apple button
+        aBtn.onclick=()=>addToAppleCalendar(found.cls.name,found.creator.name,selectedDate,selectedTime);
+      }
     }
     return;
   }
@@ -1264,11 +1280,32 @@ function promptCancel(id,name){
   document.getElementById('cancel-confirm-btn').onclick=async()=>{
     const {error}=await sb.from('bookings').update({canceled:true}).eq('id',pendingCancelId);
     if(error){showToast('Error cancelling — try again');return;}
+    // Update local bookings
+    const canceledBk=bookings.find(b=>b.id===pendingCancelId);
     bookings=bookings.map(b=>b.id===pendingCancelId?{...b,canceled:true}:b);
+    // Auto-cancel any pending invitations for same class/date/time
+    if(canceledBk){
+      const relatedInvites=invitations.filter(i=>
+        i.status==='pending'&&
+        i.class_id===canceledBk.class_id&&
+        i.date===canceledBk.date&&
+        i.time===canceledBk.time&&
+        (i.from_user_id===canceledBk.user_id||i.to_user_id===canceledBk.user_id)
+      );
+      for(const inv of relatedInvites){
+        await sb.from('invitations').update({status:'canceled'}).eq('id',inv.id);
+      }
+      if(relatedInvites.length>0){
+        invitations=invitations.map(i=>
+          relatedInvites.find(ri=>ri.id===i.id)?{...i,status:'canceled'}:i
+        );
+      }
+    }
     closeModal('cancel-modal');
     renderSchedule();
     renderCalendar();
     updateUserUI();
+    updateActivityBadge();
     showToast('Class cancelled');
   };
   openModal('cancel-modal');
@@ -1306,7 +1343,7 @@ function renderActivity(){
   document.getElementById('activity-sub').textContent=`Your activity with ${bestie.name}`;
   const body=document.getElementById('activity-body'); body.innerHTML='';
   const pending=invitations.filter(i=>i.to_user_id===currentUser&&i.status==='pending');
-  const sent=invitations.filter(i=>i.from_user_id===currentUser);
+  const sent=invitations.filter(i=>i.from_user_id===currentUser&&i.status!=='canceled');
   if(pending.length===0&&sent.length===0){
     body.innerHTML=`<div class="empty-state"><div class="empty-icon">💌</div><div class="empty-title">No activity yet</div><div class="empty-sub">When ${bestie.name} invites you to a class, it'll show up here.</div></div>`;
     return;
