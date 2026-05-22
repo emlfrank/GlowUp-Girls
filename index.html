@@ -430,6 +430,7 @@ button,input,select,textarea{font-family:inherit}
     </div>
     <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
   </div>
+  <div id="streak-banner" style="padding:0 14px"></div>
   <div class="scroll-body" id="schedule-body"></div>
 </div>
 
@@ -449,7 +450,6 @@ button,input,select,textarea{font-family:inherit}
     <div class="pts-badge" style="border-color:var(--green)40;background:var(--green)15;color:var(--green)">👟 +25 pts</div>
   </div>
   <div class="scroll-body">
-    <div id="streak-banner"></div>
     <div class="section-label">Today's Progress</div>
     <div id="step-cards"></div>
     <div class="section-label" style="margin-top:4px">Log Steps</div>
@@ -721,15 +721,26 @@ let scheduleTab = 'mine';
 // UTILS
 // ══════════════════════════════════════════════
 function genId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5)}
-function fmtDate(d){return(d instanceof Date?d:new Date(d)).toISOString().split('T')[0]}
-function today(){return fmtDate(new Date())}
+function fmtDate(d){
+  const dt=d instanceof Date?d:new Date(d);
+  const y=dt.getFullYear();
+  const m=String(dt.getMonth()+1).padStart(2,'0');
+  const day=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function today(){
+  const now=new Date();
+  return fmtDate(now);
+}
 function showToast(m,dur=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 function openModal(id){document.getElementById(id).classList.add('open')}
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
 function displayDate(ds){
-  const t=today(), tm=fmtDate(new Date(Date.now()+86400000));
+  const t=today();
+  const tmDate=new Date();tmDate.setDate(tmDate.getDate()+1);
+  const tm=fmtDate(tmDate);
   if(ds===t)return'Today'; if(ds===tm)return'Tomorrow';
   return new Date(ds+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
@@ -755,14 +766,15 @@ function getClassById(id){
 }
 
 function getStreakDays(userId){
-  // Count consecutive days with a completed class or steps goal hit
+  // Count consecutive days where user completed a class
   let streak=0;
-  const d=new Date(); d.setHours(0,0,0,0);
+  const base=new Date();base.setHours(0,0,0,0);
   for(let i=0;i<365;i++){
-    const ds=fmtDate(new Date(d.getTime()-i*86400000));
-    const didClass=bookings.some(b=>b.user_id===userId&&b.date===ds&&(b.completed||b.missed===false));
-    const didSteps=stepLogs.some(s=>s.user_id===userId&&s.date===ds&&s.steps>=7000);
-    if(didClass||didSteps){streak++}else{break}
+    const d=new Date(base);
+    d.setDate(base.getDate()-i);
+    const ds=fmtDate(d);
+    const didClass=bookings.some(b=>b.user_id===userId&&b.date===ds&&b.completed===true);
+    if(didClass){streak++}else{break}
   }
   return streak;
 }
@@ -1278,6 +1290,7 @@ function schedTab(tab){
 }
 
 function renderSchedule(){
+  renderStreakBanner();
   const u=USERS[currentUser],bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
   const sp=document.getElementById('sched-pill');
   sp.style.background=u.color+'18';sp.style.borderColor=u.color+'40';sp.style.color=u.color;
@@ -1571,7 +1584,6 @@ async function declineInvite(invId){
 // STEPS
 // ══════════════════════════════════════════════
 function renderSteps(){
-  renderStreakBanner();
   const sc=document.getElementById('step-cards'); sc.innerHTML='';
   ['kelsey','elizabeth'].forEach(uid=>{
     const u=USERS[uid],steps=getTodaySteps(uid),pct=Math.min(steps/7000,1),met=pct>=1;
@@ -1681,21 +1693,22 @@ function renderPrize(){
 function renderStreakBanner(){
   const el=document.getElementById('streak-banner');
   if(!el)return;
-  const kStreak=getStreakDays('kelsey');
-  const eStreak=getStreakDays('elizabeth');
-  const myStreak=currentUser==='kelsey'?kStreak:eStreak;
-  const nextBonus=Math.ceil(myStreak/7)*7;
+  const myStreak=getStreakDays(currentUser);
+  const bestieStreak=getStreakDays(currentUser==='kelsey'?'elizabeth':'kelsey');
+  const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
+  if(myStreak===0&&bestieStreak===0){el.innerHTML='';return;}
+  const nextBonus=Math.ceil(Math.max(myStreak,1)/7)*7;
   const daysLeft=nextBonus-myStreak;
-  if(myStreak===0){el.innerHTML='';return;}
   const fire=myStreak>=7?'🔥':'⚡';
-  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r);border:1px solid var(--gold)40;background:var(--gold)10;margin-bottom:8px">
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r);border:1px solid var(--gold)40;background:var(--gold)10;margin-bottom:2px">
     <span style="font-size:22px">${fire}</span>
     <div style="flex:1">
-      <div style="font-size:13px;font-weight:700;color:var(--gold)">${myStreak}-day streak!</div>
-      <div style="font-size:11px;color:var(--muted)">${myStreak>=7?`${Math.floor(myStreak/7)} × 500 bonus pts earned`:`${daysLeft} more day${daysLeft!==1?'s':''} to earn 500 bonus pts`}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">Your streak: ${myStreak} day${myStreak!==1?'s':''}</div>
+      <div style="font-size:11px;color:var(--muted)">${myStreak>=7?`+${Math.floor(myStreak/7)*500} bonus pts earned 🏆`:`${daysLeft} more day${daysLeft!==1?'s':''} to earn 500 bonus pts`}</div>
+      ${bestieStreak>0?`<div style="font-size:11px;color:${bestie.color};margin-top:2px">${bestie.name}: ${bestieStreak}-day streak</div>`:''}
     </div>
-    <div style="text-align:center;background:var(--gold)20;border-radius:7px;padding:5px 9px">
-      <div style="font-size:15px;font-weight:700;color:var(--gold)">${myStreak}</div>
+    <div style="text-align:center;background:var(--gold)20;border-radius:7px;padding:5px 9px;flex-shrink:0">
+      <div style="font-size:18px;font-weight:700;color:var(--gold)">${myStreak}</div>
       <div style="font-size:8px;font-weight:600;color:var(--gold);letter-spacing:1px">DAYS</div>
     </div>
   </div>`;
