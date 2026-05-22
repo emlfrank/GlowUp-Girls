@@ -156,6 +156,10 @@ button,input,select,textarea{font-family:inherit}
 .price-badge{padding:3px 7px;border-radius:6px;font-size:11px;font-weight:700;background:#C4953A22;color:#8a6520}
 .cancel-btn{background:none;border:none;cursor:pointer;padding:2px;color:var(--muted);display:flex;align-items:center;transition:color .15s;font-size:16px}
 .cancel-btn:hover{color:var(--red)}
+.complete-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--green);background:var(--green)15;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;width:100%;transition:all .15s}
+.complete-btn:hover{background:var(--green);color:#fff}
+.complete-btn:disabled{opacity:.4;cursor:not-allowed}
+.completed-badge{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 12px;border-radius:8px;background:var(--green)18;border:1px solid var(--green)40;color:var(--green);font-size:12px;font-weight:700;width:100%}
 
 /* REACTIONS & COMMENTS */
 .reaction-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
@@ -688,7 +692,9 @@ function getMonthlyBreakdown(userId){
   const ym=getCurrentYM(),now=new Date(),[year,month]=ym.split('-').map(Number);
   const active=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&!b.canceled);
   const canceled=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&b.canceled);
-  const classPoints=active.length*100, cancelPenalty=canceled.length*100;
+  // Only award points for classes that have been marked as completed
+  const completed=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&!b.canceled&&b.completed===true);
+  const classPoints=completed.length*100, cancelPenalty=canceled.length*100;
   const stepsBonus=stepLogs.filter(s=>s.date.startsWith(ym)&&s.user_id===userId&&s.steps>=7000).length*25;
   let weeklyPenalty=0;
   let ws=new Date(year,month-1,1);
@@ -953,14 +959,18 @@ function renderDateScroll(){
 
 function renderTimeGrid(){
   const el=document.getElementById('time-grid'); el.innerHTML='';
-  const found=getClassById(currentClassId);
   TIME_SLOTS.forEach(ts=>{
-    const taken=found&&bookings.some(b=>b.class_id===found.cls.id&&b.date===selectedDate&&b.time===ts&&!b.canceled);
+    // Block if current user already has ANY class booked at this date+time
+    const alreadyBooked=bookings.some(b=>b.user_id===currentUser&&b.date===selectedDate&&b.time===ts&&!b.canceled);
+    // Block if bestie also booked (for "together" mode)
+    const bestieBooked=bookings.some(b=>b.user_id!==(currentUser==='kelsey'?'elizabeth':'kelsey')&&b.date===selectedDate&&b.time===ts&&!b.canceled);
     const past=isTimePast(selectedDate,ts);
-    const dis=taken||past;
+    const dis=alreadyBooked||past;
     const btn=document.createElement('div');
     btn.className='time-slot'+(dis?' disabled':'')+(selectedTime===ts&&!dis?' selected':'');
-    btn.textContent=ts+(taken?' ✕':past?' ⏱':'');
+    if(alreadyBooked) btn.textContent=ts+' ✕ booked';
+    else if(past) btn.textContent=ts+' ⏱';
+    else btn.textContent=ts;
     if(!dis)btn.onclick=()=>{selectedTime=ts;renderTimeGrid();renderBookBar()};
     el.appendChild(btn);
   });
@@ -1137,14 +1147,27 @@ function renderScheduleList(){
       const myReaction=bkReactions.find(r=>r.from_user_id===currentUser);
       const reactionsHtml=bkReactions.length?bkReactions.map(r=>`<span class="reaction-btn${r.from_user_id===currentUser?' mine':''}" onclick="toggleReaction('${bk.id}','${r.emoji}')">${r.emoji} <span style="font-size:10px;color:var(--muted)">${USERS[r.from_user_id]?.name||r.from_user_id}</span></span>`).join(''):'';
       const commentsHtml=bkComments.map(c=>`<div class="comment-item"><span class="comment-user" style="color:${USERS[c.user_id]?.color||'var(--text)'}">${USERS[c.user_id]?.name||c.user_id}: </span>${c.text}</div>`).join('');
+      const isPast=isTimePast(bk.date,bk.time);
+      const isCompleted=bk.completed===true;
+      const isMine=scheduleTab==='mine';
+      let completeBtnHtml='';
+      if(isMine){
+        if(isCompleted){
+          completeBtnHtml=`<div class="completed-badge">✅ Completed · +100 pts</div>`;
+        }else if(isPast){
+          completeBtnHtml=`<button class="complete-btn" onclick="completeClass('${bk.id}')">🏅 Mark as Complete · +100 pts</button>`;
+        }else{
+          completeBtnHtml=`<div style="font-size:10px;color:var(--muted);text-align:center;padding:4px 0">Complete button unlocks after class time ⏱</div>`;
+        }
+      }
       bc.innerHTML=`<div class="booking-card-top">
           <div class="time-badge" style="background:${u.color}18;color:${u.color}">${bk.time}</div>
           <div class="booking-info"><div class="booking-class-name">${bk.class_name}</div><div class="booking-creator">${bk.creator_name}</div></div>
           <div class="booking-right">
-            
-            ${scheduleTab==='mine'?`<button class="cancel-btn" onclick="promptCancel('${bk.id}','${bk.class_name.replace(/'/g,"\\'")}')">✕</button>`:''}
+            ${isMine?`<button class="cancel-btn" onclick="promptCancel('${bk.id}','${bk.class_name.replace(/'/g,"\\'")}')">✕</button>`:''}
           </div>
         </div>
+        ${completeBtnHtml}
         <div class="reaction-row">
           ${reactionsHtml}
           ${!myReaction?`<button class="add-reaction-btn" onclick="openEmojiPicker('${bk.id}')">+ React</button>`:''}
@@ -1160,6 +1183,18 @@ function renderScheduleList(){
     });
     body.appendChild(grp);
   });
+}
+
+async function completeClass(bookingId){
+  const {error}=await sb.from('bookings').update({completed:true}).eq('id',bookingId);
+  if(error){showToast('Error — try again');return;}
+  bookings=bookings.map(b=>b.id===bookingId?{...b,completed:true}:b);
+  renderSchedule();
+  renderCalendar();
+  updateUserUI();
+  const cv=document.querySelector('.view.active')?.id;
+  if(cv==='v-prize')renderPrize();
+  showToast('Class completed! 🎉 +100 pts');
 }
 
 function promptCancel(id,name){
@@ -1290,8 +1325,9 @@ function renderSteps(){
     card.innerHTML=`<div class="log-header"><div class="user-dot" style="background:${u.color};width:9px;height:9px;border-radius:50%"></div><div class="log-name">${u.name}</div>
       <button class="reset-btn" onclick="resetSteps('${uid}')">🔄</button></div>
       <div class="quick-row">${[1000,2000,3000,5000].map(a=>`<button class="quick-btn" style="color:${u.color};border-color:${u.color}30;background:${u.color}10" onclick="quickAdd('${uid}',${a})">+${a>=1000?a/1000+'k':a}</button>`).join('')}</div>
+      <div class="quick-row">${[500,1000,2000].map(a=>`<button class="quick-btn" style="color:var(--red);border-color:var(--red)25;background:var(--red)08" onclick="quickAdd('${uid}',${-a})">−${a>=1000?a/1000+'k':a}</button>`).join('')}</div>
       <div class="input-row">
-        <input class="step-input" id="si-${uid}" type="number" placeholder="Enter steps..." min="1">
+        <input class="step-input" id="si-${uid}" type="number" placeholder="Enter steps to add..." min="1">
         <button class="add-btn" style="background:${u.color}" onclick="manualAdd('${uid}')">+</button>
       </div>`;
     lc.appendChild(card);
@@ -1353,7 +1389,7 @@ function renderPrize(){
     const nextTier=PRIZE_TIERS.find(t=>pts<t.points);
     const prog=Math.min(pts/maxTier,1);
     let bdr='';
-    if(bd.classPoints)bdr+=`<div class="breakdown-row"><span class="breakdown-label">${Math.floor(bd.classPoints/100)} class${bd.classPoints/100!==1?'es':''}</span><span class="breakdown-value" style="color:var(--green)">+${bd.classPoints}</span></div>`;
+    if(bd.classPoints)bdr+=`<div class="breakdown-row"><span class="breakdown-label">${Math.floor(bd.classPoints/100)} completed class${bd.classPoints/100!==1?'es':''}</span><span class="breakdown-value" style="color:var(--green)">+${bd.classPoints}</span></div>`;
     if(bd.stepsBonus)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Steps bonus</span><span class="breakdown-value" style="color:var(--green)">+${bd.stepsBonus}</span></div>`;
     if(bd.cancelPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Cancellations</span><span class="breakdown-value" style="color:var(--red)">−${bd.cancelPenalty}</span></div>`;
     if(bd.weeklyPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Missed weeks</span><span class="breakdown-value" style="color:var(--red)">−${bd.weeklyPenalty}</span></div>`;
