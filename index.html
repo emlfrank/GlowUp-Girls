@@ -445,15 +445,27 @@ button,input,select,textarea{font-family:inherit}
 <!-- STEPS -->
 <div id="v-steps" class="view">
   <div class="top-nav">
-    <div><div class="app-title" style="font-size:20px">Daily Steps</div><div class="app-sub">Goal: 7,000</div></div>
+    <div><div class="app-title" style="font-size:20px">Daily Steps</div><div class="app-sub">Goal: 7,000 · Resets daily</div></div>
     <div class="pts-badge" style="border-color:var(--green)40;background:var(--green)15;color:var(--green)">👟 +25 pts</div>
   </div>
   <div class="scroll-body">
+    <div id="streak-banner"></div>
     <div class="section-label">Today's Progress</div>
     <div id="step-cards"></div>
     <div class="section-label" style="margin-top:4px">Log Steps</div>
     <div id="log-cards"></div>
     <div class="info-card"><span style="font-size:13px">ℹ️</span><span>Hit 7,000 steps on any day and earn <strong style="color:var(--green)">+25 pts</strong> toward your prize.</span></div>
+  </div>
+</div>
+
+<!-- CHALLENGE -->
+<div id="v-challenge" class="view">
+  <div class="top-nav">
+    <div><div class="app-title" style="font-size:20px">Challenges</div><div class="app-sub">Compete & wager</div></div>
+    <button onclick="openModal('challenge-modal')" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:8px;background:var(--rose);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer">+ New</button>
+  </div>
+  <div class="scroll-body" id="challenge-body">
+    <div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">No challenges yet</div><div class="empty-sub">Tap + New to create your first challenge with Kelsey</div></div>
   </div>
 </div>
 
@@ -496,8 +508,11 @@ button,input,select,textarea{font-family:inherit}
   <button class="nav-item" id="nav-steps" onclick="navTo('v-steps','nav-steps')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>Steps
   </button>
+  <button class="nav-item" id="nav-challenge" onclick="navTo('v-challenge','nav-challenge')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 21h8m-4-4v4M6 2h12l-2 7H8L6 2zm0 0a5 5 0 01-2 4h16a5 5 0 01-2-4"/></svg>Challenges
+  </button>
   <button class="nav-item" id="nav-prize" onclick="navTo('v-prize','nav-prize')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 21h8m-4-4v4M6 2h12l-2 7H8L6 2zm0 0a5 5 0 01-2 4h16a5 5 0 01-2-4"/></svg>Prizes
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Prizes
   </button>
 </nav>
 
@@ -530,6 +545,47 @@ button,input,select,textarea{font-family:inherit}
     <div class="modal-btn-row" style="margin-top:14px">
       <button class="modal-btn" onclick="closeModal('custom-modal')">Cancel</button>
       <button class="modal-btn primary" onclick="saveCustomClass()">Add & Book →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESCHEDULE MODAL -->
+<div class="modal-overlay" id="reschedule-modal">
+  <div class="modal">
+    <button class="back-btn" onclick="closeModal('reschedule-modal')" style="margin-bottom:8px">← Back</button>
+    <div class="modal-title">Reschedule Class</div>
+    <div id="reschedule-title" style="font-size:13px;color:var(--muted);margin-bottom:12px"></div>
+    <div class="section-label">New Date</div>
+    <div class="date-scroll" id="reschedule-date-grid" style="margin-bottom:12px"></div>
+    <div class="section-label">New Time</div>
+    <div class="time-grid" id="reschedule-time-grid" style="margin-bottom:14px"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn" onclick="closeModal('reschedule-modal')">Cancel</button>
+      <button class="modal-btn primary" onclick="confirmReschedule()">Confirm Reschedule →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE CHALLENGE MODAL -->
+<div class="modal-overlay" id="challenge-modal">
+  <div class="modal">
+    <button class="back-btn" onclick="closeModal('challenge-modal')" style="margin-bottom:8px">← Back</button>
+    <div class="modal-title">New Challenge</div>
+    <div style="display:flex;flex-direction:column;gap:11px;margin-top:10px">
+      <div><label class="form-label">Challenge Name</label><input class="form-input" id="ch-name" placeholder="e.g. Most classes this week"></div>
+      <div><label class="form-label">Description</label><input class="form-input" id="ch-desc" placeholder="What's the goal?"></div>
+      <div><label class="form-label">End Date</label><input class="form-input" id="ch-end" type="date"></div>
+      <div><label class="form-label">Wager (optional)</label><input class="form-input" id="ch-wager" placeholder="e.g. Loser buys dinner, 500 pts, etc."></div>
+      <div><label class="form-label">Wager Type</label>
+        <div style="display:flex;gap:7px;margin-top:5px">
+          <button id="wager-pts" onclick="setWagerType('points')" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--gold);background:var(--gold)15;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer">⭐ Points</button>
+          <button id="wager-prize" onclick="setWagerType('prize')" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">🎁 Prize/IOU</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btn-row" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('challenge-modal')">Cancel</button>
+      <button class="modal-btn primary" onclick="saveChallenge()">Create Challenge →</button>
     </div>
   </div>
 </div>
@@ -568,10 +624,11 @@ const sb = createClient(
 // DATA
 // ══════════════════════════════════════════════
 const PRIZE_TIERS=[
-  {points:500,name:"Film Night Kit",emoji:"🎬",desc:"Artisan popcorn, scented candle, face masks & a feel-good film"},
-  {points:1000,name:"Smoothie Bar Fund",emoji:"🥤",desc:"$15 each at your favourite juice bar or açaí bowl spot"},
-  {points:1500,name:"Spa Afternoon",emoji:"🛁",desc:"A shared spa budget for a treatment or the fanciest at-home pamper"},
-  {points:2000,name:"Fancy Brunch Date",emoji:"🥂",desc:"A proper celebration brunch, dressed up — your choice of spot"},
+  {points:500,name:"Coffee Date",emoji:"☕",desc:"Winner picks the coffee spot, loser buys both drinks"},
+  {points:1000,name:"Face Mask Night",emoji:"🧖",desc:"At-home spa night — winner picks the movie, loser supplies the snacks"},
+  {points:1500,name:"Workout Outfit",emoji:"🛍️",desc:"Loser buys winner a new workout top or leggings (budget: $30)"},
+  {points:2000,name:"Brunch Queen",emoji:"🥂",desc:"Full brunch out, dressed up — loser pays for winner's meal"},
+  {points:3000,name:"Spa Day",emoji:"💆",desc:"A real spa treatment — book it together, loser covers winner's session"},
 ];
 const USERS={kelsey:{id:"kelsey",name:"Kelsey",color:"#BF6375"},elizabeth:{id:"elizabeth",name:"Elizabeth",color:"#8B7DB0"}};
 const TIME_SLOTS=["6:00 AM","7:00 AM","8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM"];
@@ -697,14 +754,31 @@ function getClassById(id){
   return null;
 }
 
+function getStreakDays(userId){
+  // Count consecutive days with a completed class or steps goal hit
+  let streak=0;
+  const d=new Date(); d.setHours(0,0,0,0);
+  for(let i=0;i<365;i++){
+    const ds=fmtDate(new Date(d.getTime()-i*86400000));
+    const didClass=bookings.some(b=>b.user_id===userId&&b.date===ds&&(b.completed||b.missed===false));
+    const didSteps=stepLogs.some(s=>s.user_id===userId&&s.date===ds&&s.steps>=7000);
+    if(didClass||didSteps){streak++}else{break}
+  }
+  return streak;
+}
+
 function getMonthlyBreakdown(userId){
   const ym=getCurrentYM(),now=new Date(),[year,month]=ym.split('-').map(Number);
-  const active=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&!b.canceled);
   const canceled=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&b.canceled);
-  // Only award points for classes that have been marked as completed
   const completed=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&!b.canceled&&b.completed===true);
-  const classPoints=completed.length*100, cancelPenalty=canceled.length*100;
+  const missed=bookings.filter(b=>b.user_id===userId&&b.date.startsWith(ym)&&b.missed===true);
+  const classPoints=completed.length*100;
+  const cancelPenalty=canceled.length*100;
+  const missedPenalty=missed.length*100;
   const stepsBonus=stepLogs.filter(s=>s.date.startsWith(ym)&&s.user_id===userId&&s.steps>=7000).length*25;
+  // Streak bonus: 500 pts for every 7-day streak
+  const streak=getStreakDays(userId);
+  const streakBonus=Math.floor(streak/7)*500;
   let weeklyPenalty=0;
   let ws=new Date(year,month-1,1);
   const dow=ws.getDay();ws.setDate(ws.getDate()+(dow===0?-6:1-dow));
@@ -718,13 +792,20 @@ function getMonthlyBreakdown(userId){
     }
     ws.setDate(ws.getDate()+7);
   }
-  return{classPoints,cancelPenalty,stepsBonus,weeklyPenalty,total:Math.max(0,classPoints-cancelPenalty+stepsBonus-weeklyPenalty)};
+  return{classPoints,cancelPenalty,missedPenalty,stepsBonus,streakBonus,streak,weeklyPenalty,
+    total:Math.max(0,classPoints-cancelPenalty-missedPenalty+stepsBonus+streakBonus-weeklyPenalty)};
 }
 
 function getUpcoming(userId){
   const t=today();
-  return bookings.filter(b=>b.user_id===userId&&b.date>=t&&!b.canceled)
-    .sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):a.time.localeCompare(b.time));
+  // Only show classes that are: not canceled, not completed, not missed, and not in the past
+  return bookings.filter(b=>{
+    if(b.user_id!==userId||b.canceled||b.completed||b.missed)return false;
+    // If date is today, show regardless of time (user may still complete)
+    if(b.date===t)return true;
+    // Future dates only
+    return b.date>t;
+  }).sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):a.time.localeCompare(b.time));
 }
 function getTodaySteps(userId){const s=stepLogs.find(x=>x.date===today()&&x.user_id===userId);return s?s.steps:0}
 
@@ -732,13 +813,14 @@ function getTodaySteps(userId){const s=stepLogs.find(x=>x.date===today()&&x.user
 // SUPABASE OPERATIONS
 // ══════════════════════════════════════════════
 async function loadAll(){
-  const [bk,inv,sl,rx,cm,cc]=await Promise.all([
+  const [bk,inv,sl,rx,cm,cc,ch]=await Promise.all([
     sb.from('bookings').select('*').order('created_at',{ascending:false}),
     sb.from('invitations').select('*').order('created_at',{ascending:false}),
     sb.from('step_logs').select('*'),
     sb.from('reactions').select('*'),
     sb.from('comments').select('*').order('created_at',{ascending:true}),
     sb.from('custom_classes').select('*'),
+    sb.from('challenges').select('*').order('created_at',{ascending:false}),
   ]);
   if(bk.data)bookings=bk.data;
   if(inv.data)invitations=inv.data;
@@ -746,6 +828,7 @@ async function loadAll(){
   if(rx.data)reactions=rx.data;
   if(cm.data)comments=cm.data;
   if(cc.data)customClasses=cc.data;
+  if(ch.data)challenges=ch.data;
 }
 
 function subscribeRealtime(){
@@ -756,6 +839,7 @@ function subscribeRealtime(){
     .on('postgres_changes',{event:'*',schema:'public',table:'reactions'},async()=>{const{data}=await sb.from('reactions').select('*');if(data){reactions=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-schedule')renderSchedule();if(cv==='v-activity')renderActivity()}})
     .on('postgres_changes',{event:'*',schema:'public',table:'comments'},async()=>{const{data}=await sb.from('comments').select('*').order('created_at',{ascending:true});if(data){comments=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-schedule')renderSchedule();if(cv==='v-activity')renderActivity()}})
     .on('postgres_changes',{event:'*',schema:'public',table:'custom_classes'},async()=>{const{data}=await sb.from('custom_classes').select('*');if(data)customClasses=data})
+    .on('postgres_changes',{event:'*',schema:'public',table:'challenges'},async()=>{const{data}=await sb.from('challenges').select('*').order('created_at',{ascending:false});if(data){challenges=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-challenge')renderChallenges()}})
     .subscribe();
 }
 
@@ -825,6 +909,7 @@ function navTo(viewId,navId){
   if(viewId==='v-activity')renderActivity();
   if(viewId==='v-steps')renderSteps();
   if(viewId==='v-prize')renderPrize();
+  if(viewId==='v-challenge')renderChallenges();
 }
 function goBack(){
   if(document.getElementById('v-class').classList.contains('active')){showView(currentCreatorId?'v-creator':'v-home')}
@@ -1226,15 +1311,30 @@ function renderScheduleList(){
       const commentsHtml=bkComments.map(c=>`<div class="comment-item"><span class="comment-user" style="color:${USERS[c.user_id]?.color||'var(--text)'}">${USERS[c.user_id]?.name||c.user_id}: </span>${c.text}</div>`).join('');
       const isPast=isTimePast(bk.date,bk.time);
       const isCompleted=bk.completed===true;
+      const isMissed=bk.missed===true;
       const isMine=scheduleTab==='mine';
+      // Build calendar links for this booking
+      const{googleUrl}=buildCalendarLinks(bk.class_name,bk.creator_name,bk.date,bk.time);
+      const calBtns=`<div class="cal-btn-row" style="margin-top:6px">
+        <button class="cal-btn apple" style="font-size:10px;padding:6px" onclick="addToAppleCalendar('${bk.class_name.replace(/'/g,"\\'")}','${bk.creator_name.replace(/'/g,"\\'")}','${bk.date}','${bk.time}')">🍎 Apple Cal</button>
+        <a class="cal-btn google" style="font-size:10px;padding:6px" href="${googleUrl}" target="_blank" rel="noopener">📅 Google Cal</a>
+      </div>`;
       let completeBtnHtml='';
       if(isMine){
         if(isCompleted){
           completeBtnHtml=`<div class="completed-badge">✅ Completed · +100 pts</div>`;
+        }else if(isMissed){
+          completeBtnHtml=`<div style="display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:8px;background:var(--red)10;border:1px solid var(--red)30;color:var(--red);font-size:12px;font-weight:700">😔 Missed · −100 pts</div>`;
         }else if(isPast){
-          completeBtnHtml=`<button class="complete-btn" onclick="completeClass('${bk.id}')">🏅 Mark as Complete · +100 pts</button>`;
+          completeBtnHtml=`<div style="display:flex;gap:6px">
+            <button class="complete-btn" style="flex:1" onclick="completeClass('${bk.id}')">✅ Done · +100 pts</button>
+            <button class="complete-btn" style="flex:1;border-color:var(--red);color:var(--red);background:var(--red)10" onclick="missClass('${bk.id}')">😔 Missed · −100</button>
+          </div>
+          <button style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted)" onclick="openReschedule('${bk.id}')">📅 Reschedule (no penalty)</button>`;
         }else{
-          completeBtnHtml=`<div style="font-size:10px;color:var(--muted);text-align:center;padding:4px 0">Complete button unlocks after class time ⏱</div>`;
+          completeBtnHtml=`<button style="width:100%;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted)" onclick="openReschedule('${bk.id}')">📅 Reschedule</button>
+          ${calBtns}
+          <div style="font-size:10px;color:var(--muted);text-align:center;padding:3px 0">Done/Missed buttons unlock after class time ⏱</div>`;
         }
       }
       bc.innerHTML=`<div class="booking-card-top">
@@ -1263,15 +1363,82 @@ function renderScheduleList(){
 }
 
 async function completeClass(bookingId){
-  const {error}=await sb.from('bookings').update({completed:true}).eq('id',bookingId);
+  const {error}=await sb.from('bookings').update({completed:true,missed:false}).eq('id',bookingId);
   if(error){showToast('Error — try again');return;}
-  bookings=bookings.map(b=>b.id===bookingId?{...b,completed:true}:b);
-  renderSchedule();
-  renderCalendar();
-  updateUserUI();
+  bookings=bookings.map(b=>b.id===bookingId?{...b,completed:true,missed:false}:b);
+  renderSchedule();renderCalendar();updateUserUI();
   const cv=document.querySelector('.view.active')?.id;
   if(cv==='v-prize')renderPrize();
   showToast('Class completed! 🎉 +100 pts');
+}
+
+async function missClass(bookingId){
+  const {error}=await sb.from('bookings').update({missed:true,completed:false}).eq('id',bookingId);
+  if(error){showToast('Error — try again');return;}
+  bookings=bookings.map(b=>b.id===bookingId?{...b,missed:true,completed:false}:b);
+  renderSchedule();renderCalendar();updateUserUI();
+  const cv=document.querySelector('.view.active')?.id;
+  if(cv==='v-prize')renderPrize();
+  showToast('Marked as missed. −100 pts 😔');
+}
+
+let rescheduleBookingId=null;
+function openReschedule(bookingId){
+  rescheduleBookingId=bookingId;
+  const bk=bookings.find(b=>b.id===bookingId);
+  if(!bk)return;
+  // Populate reschedule modal
+  document.getElementById('reschedule-title').textContent=bk.class_name;
+  renderRescheduleDateGrid();
+  openModal('reschedule-modal');
+}
+
+let rescheduleDate=null;
+let rescheduleTime=null;
+function renderRescheduleDateGrid(){
+  const grid=document.getElementById('reschedule-date-grid');
+  grid.innerHTML='';
+  rescheduleDate=null; rescheduleTime=null;
+  renderRescheduleTimeGrid();
+  getNext7().forEach(d=>{
+    const ds=fmtDate(d);
+    const pill=document.createElement('div');
+    pill.className='date-pill';
+    pill.innerHTML=`<span class="date-day">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="date-num">${d.getDate()}</span>`;
+    pill.onclick=()=>{
+      rescheduleDate=ds;
+      grid.querySelectorAll('.date-pill').forEach(p=>p.classList.remove('selected'));
+      pill.classList.add('selected');
+      renderRescheduleTimeGrid();
+    };
+    grid.appendChild(pill);
+  });
+}
+
+function renderRescheduleTimeGrid(){
+  const grid=document.getElementById('reschedule-time-grid');
+  grid.innerHTML='';
+  if(!rescheduleDate){grid.innerHTML='<div style="font-size:11px;color:var(--muted)">Pick a date first</div>';return;}
+  TIME_SLOTS.forEach(ts=>{
+    const taken=bookings.some(b=>b.user_id===currentUser&&b.date===rescheduleDate&&b.time===ts&&!b.canceled&&b.id!==rescheduleBookingId);
+    const past=isTimePast(rescheduleDate,ts);
+    const dis=taken||past;
+    const btn=document.createElement('div');
+    btn.className='time-slot'+(dis?' disabled':'')+(rescheduleTime===ts&&!dis?' selected':'');
+    btn.textContent=ts+(taken?' ✕':past?' ⏱':'');
+    if(!dis)btn.onclick=()=>{rescheduleTime=ts;renderRescheduleTimeGrid()};
+    grid.appendChild(btn);
+  });
+}
+
+async function confirmReschedule(){
+  if(!rescheduleDate||!rescheduleTime){showToast('Pick a date and time');return;}
+  const {error}=await sb.from('bookings').update({date:rescheduleDate,time:rescheduleTime}).eq('id',rescheduleBookingId);
+  if(error){showToast('Error rescheduling — try again');return;}
+  bookings=bookings.map(b=>b.id===rescheduleBookingId?{...b,date:rescheduleDate,time:rescheduleTime}:b);
+  closeModal('reschedule-modal');
+  renderSchedule();renderCalendar();
+  showToast(`Rescheduled to ${displayDate(rescheduleDate)} at ${rescheduleTime} ✅`);
 }
 
 function promptCancel(id,name){
@@ -1404,6 +1571,7 @@ async function declineInvite(invId){
 // STEPS
 // ══════════════════════════════════════════════
 function renderSteps(){
+  renderStreakBanner();
   const sc=document.getElementById('step-cards'); sc.innerHTML='';
   ['kelsey','elizabeth'].forEach(uid=>{
     const u=USERS[uid],steps=getTodaySteps(uid),pct=Math.min(steps/7000,1),met=pct>=1;
@@ -1488,8 +1656,10 @@ function renderPrize(){
     const prog=Math.min(pts/maxTier,1);
     let bdr='';
     if(bd.classPoints)bdr+=`<div class="breakdown-row"><span class="breakdown-label">${Math.floor(bd.classPoints/100)} completed class${bd.classPoints/100!==1?'es':''}</span><span class="breakdown-value" style="color:var(--green)">+${bd.classPoints}</span></div>`;
-    if(bd.stepsBonus)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Steps bonus</span><span class="breakdown-value" style="color:var(--green)">+${bd.stepsBonus}</span></div>`;
+    if(bd.stepsBonus)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Steps goal days</span><span class="breakdown-value" style="color:var(--green)">+${bd.stepsBonus}</span></div>`;
+    if(bd.streakBonus)bdr+=`<div class="breakdown-row"><span class="breakdown-label">🔥 ${bd.streak}-day streak bonus</span><span class="breakdown-value" style="color:var(--gold)">+${bd.streakBonus}</span></div>`;
     if(bd.cancelPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Cancellations</span><span class="breakdown-value" style="color:var(--red)">−${bd.cancelPenalty}</span></div>`;
+    if(bd.missedPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Missed classes</span><span class="breakdown-value" style="color:var(--red)">−${bd.missedPenalty}</span></div>`;
     if(bd.weeklyPenalty)bdr+=`<div class="breakdown-row"><span class="breakdown-label">Missed weeks</span><span class="breakdown-value" style="color:var(--red)">−${bd.weeklyPenalty}</span></div>`;
     if(!bdr)bdr='<span style="font-size:11px;color:var(--muted);font-style:italic">No activity yet</span>';
     const card=document.createElement('div'); card.className='user-card';
@@ -1503,6 +1673,154 @@ function renderPrize(){
       <div class="breakdown-card"><div class="breakdown-title">Breakdown</div>${bdr}<div style="height:1px;background:var(--border);margin:3px 0"></div><div class="breakdown-row"><span class="breakdown-label" style="font-weight:700;color:var(--text)">Total</span><span class="breakdown-value" style="color:${u.color};font-size:13px">${pts}</span></div></div>`;
     pc.appendChild(card);
   });
+}
+
+// ══════════════════════════════════════════════
+// STREAK
+// ══════════════════════════════════════════════
+function renderStreakBanner(){
+  const el=document.getElementById('streak-banner');
+  if(!el)return;
+  const kStreak=getStreakDays('kelsey');
+  const eStreak=getStreakDays('elizabeth');
+  const myStreak=currentUser==='kelsey'?kStreak:eStreak;
+  const nextBonus=Math.ceil(myStreak/7)*7;
+  const daysLeft=nextBonus-myStreak;
+  if(myStreak===0){el.innerHTML='';return;}
+  const fire=myStreak>=7?'🔥':'⚡';
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r);border:1px solid var(--gold)40;background:var(--gold)10;margin-bottom:8px">
+    <span style="font-size:22px">${fire}</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">${myStreak}-day streak!</div>
+      <div style="font-size:11px;color:var(--muted)">${myStreak>=7?`${Math.floor(myStreak/7)} × 500 bonus pts earned`:`${daysLeft} more day${daysLeft!==1?'s':''} to earn 500 bonus pts`}</div>
+    </div>
+    <div style="text-align:center;background:var(--gold)20;border-radius:7px;padding:5px 9px">
+      <div style="font-size:15px;font-weight:700;color:var(--gold)">${myStreak}</div>
+      <div style="font-size:8px;font-weight:600;color:var(--gold);letter-spacing:1px">DAYS</div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// CHALLENGES
+// ══════════════════════════════════════════════
+let challenges=[];
+let challengeWagerType='points';
+
+function setWagerType(type){
+  challengeWagerType=type;
+  const pts=document.getElementById('wager-pts');
+  const prize=document.getElementById('wager-prize');
+  if(pts&&prize){
+    if(type==='points'){
+      pts.style.background='var(--gold)15';pts.style.borderColor='var(--gold)';pts.style.color='var(--gold)';
+      prize.style.background='var(--subtle)';prize.style.borderColor='var(--border)';prize.style.color='var(--muted)';
+    }else{
+      prize.style.background='var(--rose)15';prize.style.borderColor='var(--rose)';prize.style.color='var(--rose)';
+      pts.style.background='var(--subtle)';pts.style.borderColor='var(--border)';pts.style.color='var(--muted)';
+    }
+  }
+}
+
+async function saveChallenge(){
+  const name=document.getElementById('ch-name').value.trim();
+  const desc=document.getElementById('ch-desc').value.trim();
+  const endDate=document.getElementById('ch-end').value;
+  const wager=document.getElementById('ch-wager').value.trim();
+  if(!name||!endDate){showToast('Add a name and end date');return;}
+  const ch={
+    id:genId(),
+    name,desc,
+    end_date:endDate,
+    wager,
+    wager_type:challengeWagerType,
+    created_by:currentUser,
+    created_at:new Date().toISOString(),
+    status:'active',
+    winner:null
+  };
+  const {error}=await sb.from('challenges').insert(ch);
+  if(error){showToast('Error saving — try again');console.error(error);return;}
+  challenges=[ch,...challenges];
+  closeModal('challenge-modal');
+  document.getElementById('ch-name').value='';
+  document.getElementById('ch-desc').value='';
+  document.getElementById('ch-end').value='';
+  document.getElementById('ch-wager').value='';
+  renderChallenges();
+  showToast('Challenge created! 🏆');
+}
+
+async function declareWinner(challengeId,winnerId){
+  const {error}=await sb.from('challenges').update({winner:winnerId,status:'complete'}).eq('id',challengeId);
+  if(error){showToast('Error — try again');return;}
+  challenges=challenges.map(c=>c.id===challengeId?{...c,winner:winnerId,status:'complete'}:c);
+  renderChallenges();
+  showToast(`${USERS[winnerId].name} wins! 🎉`);
+}
+
+async function deleteChallenge(challengeId){
+  await sb.from('challenges').delete().eq('id',challengeId);
+  challenges=challenges.filter(c=>c.id!==challengeId);
+  renderChallenges();
+  showToast('Challenge deleted');
+}
+
+function renderChallenges(){
+  const body=document.getElementById('challenge-body');
+  if(!body)return;
+  if(challenges.length===0){
+    body.innerHTML=`<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">No challenges yet</div><div class="empty-sub">Tap + New to create your first challenge</div></div>`;
+    return;
+  }
+  body.innerHTML='';
+  const active=challenges.filter(c=>c.status==='active');
+  const done=challenges.filter(c=>c.status==='complete');
+  if(active.length){
+    const lbl=document.createElement('div');lbl.className='section-label';lbl.textContent='Active Challenges';
+    body.appendChild(lbl);
+    active.forEach(ch=>body.appendChild(buildChallengeCard(ch)));
+  }
+  if(done.length){
+    const lbl=document.createElement('div');lbl.className='section-label';lbl.style.marginTop='8px';lbl.textContent='Completed';
+    body.appendChild(lbl);
+    done.forEach(ch=>body.appendChild(buildChallengeCard(ch)));
+  }
+}
+
+function buildChallengeCard(ch){
+  const card=document.createElement('div');
+  card.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:8px';
+  const end=new Date(ch.end_date+'T23:59:59');
+  const now=new Date();
+  const daysLeft=Math.max(0,Math.ceil((end-now)/86400000));
+  const isActive=ch.status==='active';
+  const creator=USERS[ch.created_by]||{name:ch.created_by,color:'var(--muted)'};
+  const winner=ch.winner?USERS[ch.winner]:null;
+  card.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">${ch.name}</div>
+        ${ch.desc?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">${ch.desc}</div>`:''}
+      </div>
+      ${isActive?`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--green)18;color:var(--green);flex-shrink:0">${daysLeft}d left</span>`
+        :`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--subtle);color:var(--muted);flex-shrink:0">Done</span>`}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      ${ch.wager?`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:${ch.wager_type==='points'?'var(--gold)18':'var(--rose)15'};color:${ch.wager_type==='points'?'var(--gold)':'var(--rose)'};border:1px solid ${ch.wager_type==='points'?'var(--gold)40':'var(--rose)40'}">${ch.wager_type==='points'?'⭐':'🎁'} ${ch.wager}</span>`:''}
+      <span style="font-size:10px;color:var(--muted)">Created by ${creator.name} · ends ${new Date(ch.end_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+    </div>
+    ${winner?`<div style="display:flex;align-items:center;gap:8px;padding:9px;border-radius:8px;background:${USERS[ch.winner]?.color||'var(--gold)'}15;border:1px solid ${USERS[ch.winner]?.color||'var(--gold)'}40">
+      <span style="font-size:18px">🏆</span>
+      <div style="font-size:13px;font-weight:700;color:${USERS[ch.winner]?.color||'var(--gold)'}">${winner.name} won!</div>
+    </div>`:''}
+    ${isActive?`<div style="display:flex;gap:6px;margin-top:8px">
+      <button onclick="declareWinner('${ch.id}','kelsey')" style="flex:1;padding:7px;border-radius:7px;border:1px solid ${USERS.kelsey.color}40;background:${USERS.kelsey.color}10;color:${USERS.kelsey.color};font-size:11px;font-weight:700;cursor:pointer">🏆 Kelsey Wins</button>
+      <button onclick="declareWinner('${ch.id}','elizabeth')" style="flex:1;padding:7px;border-radius:7px;border:1px solid ${USERS.elizabeth.color}40;background:${USERS.elizabeth.color}10;color:${USERS.elizabeth.color};font-size:11px;font-weight:700;cursor:pointer">🏆 Elizabeth Wins</button>
+      <button onclick="deleteChallenge('${ch.id}')" style="padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:13px;cursor:pointer">🗑️</button>
+    </div>`:`<button onclick="deleteChallenge('${ch.id}')" style="width:100%;margin-top:8px;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;cursor:pointer">Delete</button>`}
+  `;
+  return card;
 }
 
 // ══════════════════════════════════════════════
