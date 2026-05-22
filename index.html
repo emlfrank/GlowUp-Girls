@@ -138,6 +138,11 @@ button,input,select,textarea{font-family:inherit}
 .action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);font-size:12px;font-weight:600;cursor:pointer;color:var(--text);transition:all .15s}
 .action-btn.primary{background:var(--rose);border-color:var(--rose);color:#fff}
 .action-btn.primary:hover{background:#a84e63}
+.cal-btn-row{display:flex;gap:6px;margin-bottom:7px}
+.cal-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;border-radius:7px;border:1px solid var(--border);background:var(--card);font-size:11px;font-weight:600;cursor:pointer;color:var(--text);transition:all .15s;text-decoration:none}
+.cal-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.cal-btn.apple{border-color:#555;background:#1c1c1e;color:#fff}
+.cal-btn.google{border-color:#4285F430;background:#4285F410;color:#4285F4}
 
 /* SCHEDULE */
 .schedule-header{background:linear-gradient(135deg,#FFE0EE,#FFF0F7);padding:16px 16px 18px;border-bottom:1px solid #DDD0BC}
@@ -377,6 +382,10 @@ button,input,select,textarea{font-family:inherit}
   <div class="book-bar">
     <div id="book-confirmed" style="display:none">
       <div class="confirmed-badge">✅ <span id="confirmed-text"></span></div>
+      <div class="cal-btn-row">
+        <a class="cal-btn apple" id="cal-apple" href="#" target="_blank" rel="noopener">🍎 Add to Apple Calendar</a>
+        <a class="cal-btn google" id="cal-google" href="#" target="_blank" rel="noopener">📅 Add to Google Calendar</a>
+      </div>
       <div class="action-row"><button class="action-btn primary" id="done-btn">Done →</button></div>
     </div>
     <div id="book-pre">
@@ -986,9 +995,61 @@ function renderModeButtons(){
 
 function setMode(m){bookingMode=m;renderModeButtons();renderBookBar()}
 
+function buildCalendarLinks(className,creatorName,dateStr,timeStr){
+  // Parse the time string e.g. "7:00 AM" into hours/minutes
+  const [tp,ap]=timeStr.split(' ');
+  const [h,m]=tp.split(':').map(Number);
+  let hr=h;
+  if(ap==='PM'&&hr!==12)hr+=12;
+  if(ap==='AM'&&hr===12)hr=0;
+  const [year,month,day]=dateStr.split('-').map(Number);
+  // Start time
+  const start=new Date(year,month-1,day,hr,m||0,0);
+  // End time = start + 1 hour
+  const end=new Date(start.getTime()+60*60*1000);
+  const pad=n=>String(n).padStart(2,'0');
+  const fmtLocal=dt=>`${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  const title=encodeURIComponent(`GlowUp Girls: ${className}`);
+  const details=encodeURIComponent(`${className} with ${creatorName} — booked on GlowUp Girls Studio`);
+  const location=encodeURIComponent('Home Workout');
+  // Google Calendar URL
+  const googleUrl=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${details}&location=${location}`;
+  // Apple Calendar uses .ics file via data URI
+  const icsContent=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//GlowUp Girls Studio//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${fmtLocal(start)}`,
+    `DTEND:${fmtLocal(end)}`,
+    `SUMMARY:GlowUp Girls: ${className}`,
+    `DESCRIPTION:${className} with ${creatorName}`,
+    'LOCATION:Home Workout',
+    `UID:${Date.now()}@glowupgirls`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const icsUrl='data:text/calendar;charset=utf-8,'+encodeURIComponent(icsContent);
+  return{googleUrl,icsUrl};
+}
+
 function renderBookBar(){
   const pre=document.getElementById('book-pre'),conf=document.getElementById('book-confirmed');
-  if(bookedId){pre.style.display='none';conf.style.display='block';document.getElementById('confirmed-text').textContent=`Booked for ${displayDate(selectedDate)} at ${selectedTime}`;document.getElementById('done-btn').onclick=()=>showView(currentCreatorId?'v-creator':'v-home');return}
+  if(bookedId){
+    pre.style.display='none';conf.style.display='block';
+    document.getElementById('confirmed-text').textContent=`Booked for ${displayDate(selectedDate)} at ${selectedTime}`;
+    document.getElementById('done-btn').onclick=()=>showView(currentCreatorId?'v-creator':'v-home');
+    // Build calendar links
+    const found=getClassById(currentClassId);
+    if(found&&selectedDate&&selectedTime){
+      const{googleUrl,icsUrl}=buildCalendarLinks(found.cls.name,found.creator.name,selectedDate,selectedTime);
+      const gBtn=document.getElementById('cal-google');
+      const aBtn=document.getElementById('cal-apple');
+      if(gBtn)gBtn.href=googleUrl;
+      if(aBtn)aBtn.href=icsUrl;
+    }
+    return;
+  }
   pre.style.display='block';conf.style.display='none';
   const btn=document.getElementById('book-btn'),txt=document.getElementById('book-btn-txt'),si=document.getElementById('sel-info');
   const bestie=USERS[currentUser==='kelsey'?'elizabeth':'kelsey'];
