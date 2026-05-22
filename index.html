@@ -1743,18 +1743,22 @@ async function saveChallenge(){
   if(!name||!endDate){showToast('Add a name and end date');return;}
   const ch={
     id:genId(),
-    name,desc,
+    name,
+    desc,
     end_date:endDate,
-    wager,
+    wager:wager||null,
     wager_type:challengeWagerType,
     created_by:currentUser,
-    created_at:new Date().toISOString(),
     status:'active',
-    winner:null
   };
-  const {error}=await sb.from('challenges').insert(ch);
-  if(error){showToast('Error saving — try again');console.error(error);return;}
-  challenges=[ch,...challenges];
+  const {data:insertedData,error}=await sb.from('challenges').insert(ch).select();
+  if(error){
+    console.error('Challenge insert error:',error);
+    showToast('Error: '+error.message);
+    return;
+  }
+  const saved=insertedData?.[0]||{...ch,created_at:new Date().toISOString(),winner:null};
+  challenges=[saved,...challenges];
   closeModal('challenge-modal');
   document.getElementById('ch-name').value='';
   document.getElementById('ch-desc').value='';
