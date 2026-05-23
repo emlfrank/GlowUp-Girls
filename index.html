@@ -1381,9 +1381,25 @@ function renderScheduleList(){
 }
 
 async function completeClass(bookingId){
+  // Also mark Kelsey's booking as complete if this was a joint class
+  const myBk=bookings.find(b=>b.id===bookingId);
   const {error}=await sb.from('bookings').update({completed:true,missed:false}).eq('id',bookingId);
-  if(error){showToast('Error — try again');return;}
+  if(error){showToast('Error: '+error.message);console.error(error);return;}
   bookings=bookings.map(b=>b.id===bookingId?{...b,completed:true,missed:false}:b);
+  // If joint booking, also mark the other user's booking for same class/date/time
+  if(myBk){
+    const jointBk=bookings.find(b=>
+      b.id!==bookingId&&
+      b.class_id===myBk.class_id&&
+      b.date===myBk.date&&
+      b.time===myBk.time&&
+      !b.canceled&&!b.completed
+    );
+    if(jointBk){
+      await sb.from('bookings').update({completed:true,missed:false}).eq('id',jointBk.id);
+      bookings=bookings.map(b=>b.id===jointBk.id?{...b,completed:true,missed:false}:b);
+    }
+  }
   renderSchedule();renderCalendar();updateUserUI();
   const cv=document.querySelector('.view.active')?.id;
   if(cv==='v-prize')renderPrize();
@@ -1391,9 +1407,24 @@ async function completeClass(bookingId){
 }
 
 async function missClass(bookingId){
+  const myBk=bookings.find(b=>b.id===bookingId);
   const {error}=await sb.from('bookings').update({missed:true,completed:false}).eq('id',bookingId);
-  if(error){showToast('Error — try again');return;}
+  if(error){showToast('Error: '+error.message);console.error(error);return;}
   bookings=bookings.map(b=>b.id===bookingId?{...b,missed:true,completed:false}:b);
+  // If joint booking, also mark the other user's booking
+  if(myBk){
+    const jointBk=bookings.find(b=>
+      b.id!==bookingId&&
+      b.class_id===myBk.class_id&&
+      b.date===myBk.date&&
+      b.time===myBk.time&&
+      !b.canceled&&!b.missed
+    );
+    if(jointBk){
+      await sb.from('bookings').update({missed:true,completed:false}).eq('id',jointBk.id);
+      bookings=bookings.map(b=>b.id===jointBk.id?{...b,missed:true,completed:false}:b);
+    }
+  }
   renderSchedule();renderCalendar();updateUserUI();
   const cv=document.querySelector('.view.active')?.id;
   if(cv==='v-prize')renderPrize();
