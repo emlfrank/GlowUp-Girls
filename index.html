@@ -269,6 +269,9 @@ button,input,select,textarea{font-family:inherit}
 .form-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;display:block}
 .form-input{width:100%;border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:13px;background:var(--card);color:var(--text);outline:none;transition:border-color .15s}
 .form-input:focus{border-color:var(--rose)}
+.track-opt{width:100%;padding:9px 12px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-align:left;transition:all .15s}
+.track-opt:hover{border-color:var(--rose);color:var(--text)}
+.track-opt.active{border-color:var(--rose);background:var(--rose)12;color:var(--rose)}
 
 /* LOADING */
 .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:12px}
@@ -452,7 +455,10 @@ button,input,select,textarea{font-family:inherit}
 <div id="v-steps" class="view">
   <div class="top-nav">
     <div><div class="app-title" style="font-size:20px">Daily Steps</div><div class="app-sub">Goal: 7,000 · Resets daily</div></div>
-    <div class="pts-badge" style="border-color:var(--green)40;background:var(--green)15;color:var(--green)">👟 +25 pts</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="pts-badge" style="border-color:var(--green)40;background:var(--green)15;color:var(--green)">👟 +25 pts</div>
+      <button onclick="openHistSteps()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">+ Past day</button>
+    </div>
   </div>
   <div class="scroll-body">
     <div class="section-label">Today's Progress</div>
@@ -571,6 +577,30 @@ button,input,select,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- HISTORICAL STEPS MODAL -->
+<div class="modal-overlay" id="hist-steps-modal">
+  <div class="modal">
+    <button class="back-btn" onclick="closeModal('hist-steps-modal')" style="margin-bottom:8px">← Back</button>
+    <div class="modal-title">Log Past Steps</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Add steps for a day you missed logging</div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div>
+        <label class="form-label">Who</label>
+        <div style="display:flex;gap:7px;margin-top:5px">
+          <button id="hist-user-k" onclick="setHistUser('kelsey')" style="flex:1;padding:8px;border-radius:7px;border:1px solid ${USERS?.kelsey?.color||'#BF6375'}40;background:${USERS?.kelsey?.color||'#BF6375'}18;color:#BF6375;font-size:12px;font-weight:700;cursor:pointer">Kelsey</button>
+          <button id="hist-user-e" onclick="setHistUser('elizabeth')" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer">Elizabeth</button>
+        </div>
+      </div>
+      <div><label class="form-label">Date</label><input class="form-input" id="hist-date" type="date"></div>
+      <div><label class="form-label">Steps</label><input class="form-input" id="hist-steps" type="number" placeholder="e.g. 8500" min="0"></div>
+    </div>
+    <div class="modal-btn-row" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('hist-steps-modal')">Cancel</button>
+      <button class="modal-btn primary" onclick="saveHistSteps()">Save Steps →</button>
+    </div>
+  </div>
+</div>
+
 <!-- CREATE CHALLENGE MODAL -->
 <div class="modal-overlay" id="challenge-modal">
   <div class="modal">
@@ -578,9 +608,22 @@ button,input,select,textarea{font-family:inherit}
     <div class="modal-title">New Challenge</div>
     <div style="display:flex;flex-direction:column;gap:11px;margin-top:10px">
       <div><label class="form-label">Challenge Name</label><input class="form-input" id="ch-name" placeholder="e.g. Most classes this week"></div>
-      <div><label class="form-label">Description</label><input class="form-input" id="ch-desc" placeholder="What's the goal?"></div>
+      <div><label class="form-label">Description (optional)</label><input class="form-input" id="ch-desc" placeholder="What's the goal?"></div>
       <div><label class="form-label">End Date</label><input class="form-input" id="ch-end" type="date"></div>
-      <div><label class="form-label">Wager (optional)</label><input class="form-input" id="ch-wager" placeholder="e.g. Loser buys dinner, 500 pts, etc."></div>
+      <div>
+        <label class="form-label">Tracking Type</label>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:5px" id="tracking-options">
+          <button class="track-opt active" data-track="most_classes" onclick="setTrackType(this,'most_classes')">🏋️ Most classes completed</button>
+          <button class="track-opt" data-track="most_steps" onclick="setTrackType(this,'most_steps')">👟 Most total steps</button>
+          <button class="track-opt" data-track="most_step_days" onclick="setTrackType(this,'most_step_days')">📅 Most days hitting step goal</button>
+          <button class="track-opt" data-track="most_points" onclick="setTrackType(this,'most_points')">⭐ Most points earned</button>
+          <button class="track-opt" data-track="longest_streak" onclick="setTrackType(this,'longest_streak')">🔥 Longest workout streak</button>
+          <button class="track-opt" data-track="first_to_5" onclick="setTrackType(this,'first_to_5')">🎯 First to complete 5 classes</button>
+          <button class="track-opt" data-track="first_to_10" onclick="setTrackType(this,'first_to_10')">🎯 First to complete 10 classes</button>
+          <button class="track-opt" data-track="custom" onclick="setTrackType(this,'custom')">✏️ Custom (track manually)</button>
+        </div>
+      </div>
+      <div><label class="form-label">Wager (optional)</label><input class="form-input" id="ch-wager" placeholder="e.g. Loser buys coffee, 500 pts, etc."></div>
       <div><label class="form-label">Wager Type</label>
         <div style="display:flex;gap:7px;margin-top:5px">
           <button id="wager-pts" onclick="setWagerType('points')" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--gold);background:var(--gold)15;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer">⭐ Points</button>
@@ -830,7 +873,7 @@ function getTodaySteps(userId){const s=stepLogs.find(x=>x.date===today()&&x.user
 // SUPABASE OPERATIONS
 // ══════════════════════════════════════════════
 async function loadAll(){
-  const [bk,inv,sl,rx,cm,cc,ch]=await Promise.all([
+  const [bk,inv,sl,rx,cm,cc,ch,data8]=await Promise.all([
     sb.from('bookings').select('*').order('created_at',{ascending:false}),
     sb.from('invitations').select('*').order('created_at',{ascending:false}),
     sb.from('step_logs').select('*'),
@@ -838,6 +881,7 @@ async function loadAll(){
     sb.from('comments').select('*').order('created_at',{ascending:true}),
     sb.from('custom_classes').select('*'),
     sb.from('challenges').select('*').order('created_at',{ascending:false}),
+    sb.from('challenge_comments').select('*').order('created_at',{ascending:true}),
   ]);
   if(bk.data)bookings=bk.data;
   if(inv.data)invitations=inv.data;
@@ -846,6 +890,7 @@ async function loadAll(){
   if(cm.data)comments=cm.data;
   if(cc.data)customClasses=cc.data;
   if(ch.data)challenges=ch.data;
+  if(data8&&data8.data)challengeComments=data8.data;
 }
 
 function subscribeRealtime(){
@@ -857,6 +902,7 @@ function subscribeRealtime(){
     .on('postgres_changes',{event:'*',schema:'public',table:'comments'},async()=>{const{data}=await sb.from('comments').select('*').order('created_at',{ascending:true});if(data){comments=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-schedule')renderSchedule();if(cv==='v-activity')renderActivity()}})
     .on('postgres_changes',{event:'*',schema:'public',table:'custom_classes'},async()=>{const{data}=await sb.from('custom_classes').select('*');if(data)customClasses=data})
     .on('postgres_changes',{event:'*',schema:'public',table:'challenges'},async()=>{const{data}=await sb.from('challenges').select('*').order('created_at',{ascending:false});if(data){challenges=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-challenge')renderChallenges()}})
+    .on('postgres_changes',{event:'*',schema:'public',table:'challenge_comments'},async()=>{const{data}=await sb.from('challenge_comments').select('*').order('created_at',{ascending:true});if(data){challengeComments=data;const cv=document.querySelector('.view.active')?.id;if(cv==='v-challenge')renderChallenges()}})
     .subscribe();
 }
 
@@ -1662,6 +1708,50 @@ function renderSteps(){
   });
 }
 
+let histStepsUser='kelsey';
+function openHistSteps(){
+  histStepsUser='kelsey';
+  // Set default date to yesterday
+  const y=new Date();y.setDate(y.getDate()-1);
+  document.getElementById('hist-date').value=fmtDate(y);
+  document.getElementById('hist-steps').value='';
+  // Style buttons
+  const kb=document.getElementById('hist-user-k');
+  const eb=document.getElementById('hist-user-e');
+  if(kb){kb.style.borderColor='#BF637540';kb.style.background='#BF637518';kb.style.color='#BF6375';}
+  if(eb){eb.style.borderColor='var(--border)';eb.style.background='var(--subtle)';eb.style.color='var(--muted)';}
+  openModal('hist-steps-modal');
+}
+function setHistUser(uid){
+  histStepsUser=uid;
+  const u=USERS[uid];
+  const other=uid==='kelsey'?'elizabeth':'kelsey';
+  const btn=document.getElementById('hist-user-'+uid[0]);
+  const otherBtn=document.getElementById('hist-user-'+other[0]);
+  if(btn){btn.style.borderColor=u.color+'40';btn.style.background=u.color+'18';btn.style.color=u.color;}
+  if(otherBtn){otherBtn.style.borderColor='var(--border)';otherBtn.style.background='var(--subtle)';otherBtn.style.color='var(--muted)';}
+}
+async function saveHistSteps(){
+  const date=document.getElementById('hist-date').value;
+  const steps=parseInt(document.getElementById('hist-steps').value);
+  if(!date||isNaN(steps)||steps<0){showToast('Pick a date and enter steps');return;}
+  if(date>=today()){showToast('Use the log below for today');return;}
+  const existing=stepLogs.find(s=>s.date===date&&s.user_id===histStepsUser);
+  if(existing){
+    const {error}=await sb.from('step_logs').update({steps}).eq('id',existing.id);
+    if(error){showToast('Error: '+error.message);return;}
+    stepLogs=stepLogs.map(s=>s.id===existing.id?{...s,steps}:s);
+  }else{
+    const newLog={id:genId(),date,user_id:histStepsUser,steps};
+    const {error}=await sb.from('step_logs').insert(newLog);
+    if(error){showToast('Error: '+error.message);return;}
+    stepLogs=[...stepLogs,newLog];
+  }
+  closeModal('hist-steps-modal');
+  updateUserUI();
+  showToast(`${steps.toLocaleString()} steps saved for ${displayDate(date)} ✅`);
+}
+
 async function quickAdd(userId,amt){
   const t=today();
   const existing=stepLogs.find(s=>s.date===t&&s.user_id===userId);
@@ -1767,6 +1857,7 @@ function renderStreakBanner(){
 // CHALLENGES
 // ══════════════════════════════════════════════
 let challenges=[];
+let challengeComments=[];
 let challengeWagerType='points';
 
 function setWagerType(type){
@@ -1784,6 +1875,13 @@ function setWagerType(type){
   }
 }
 
+let challengeTrackType='most_classes';
+function setTrackType(btn,type){
+  challengeTrackType=type;
+  document.querySelectorAll('.track-opt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
 async function saveChallenge(){
   const name=document.getElementById('ch-name').value.trim();
   const desc=document.getElementById('ch-desc').value.trim();
@@ -1793,10 +1891,11 @@ async function saveChallenge(){
   const ch={
     id:genId(),
     name,
-    desc,
+    desc:desc||null,
     end_date:endDate,
     wager:wager||null,
     wager_type:challengeWagerType,
+    track_type:challengeTrackType,
     created_by:currentUser,
     status:'active',
   };
@@ -1809,12 +1908,97 @@ async function saveChallenge(){
   const saved=insertedData?.[0]||{...ch,created_at:new Date().toISOString(),winner:null};
   challenges=[saved,...challenges];
   closeModal('challenge-modal');
+  // Reset modal
   document.getElementById('ch-name').value='';
   document.getElementById('ch-desc').value='';
   document.getElementById('ch-end').value='';
   document.getElementById('ch-wager').value='';
+  challengeTrackType='most_classes';
+  document.querySelectorAll('.track-opt').forEach((b,i)=>b.classList.toggle('active',i===0));
   renderChallenges();
   showToast('Challenge created! 🏆');
+}
+
+const TRACK_LABELS={
+  most_classes:'Most classes completed',
+  most_steps:'Most total steps',
+  most_step_days:'Most days hitting step goal (7k)',
+  most_points:'Most points earned',
+  longest_streak:'Longest workout streak',
+  first_to_5:'First to complete 5 classes',
+  first_to_10:'First to complete 10 classes',
+  custom:'Custom (manual tracking)',
+};
+
+function getChallengeProgress(ch,userId){
+  const start=ch.created_at?ch.created_at.split('T')[0]:'2000-01-01';
+  const end=ch.end_date;
+  const tt=ch.track_type||'most_classes';
+  if(tt==='most_classes'){
+    return bookings.filter(b=>b.user_id===userId&&b.completed&&b.date>=start&&b.date<=end).length;
+  }
+  if(tt==='most_steps'){
+    return stepLogs.filter(s=>s.user_id===userId&&s.date>=start&&s.date<=end).reduce((sum,s)=>sum+s.steps,0);
+  }
+  if(tt==='most_step_days'){
+    return stepLogs.filter(s=>s.user_id===userId&&s.date>=start&&s.date<=end&&s.steps>=7000).length;
+  }
+  if(tt==='most_points'){
+    return getMonthlyBreakdown(userId).total;
+  }
+  if(tt==='longest_streak'){
+    return getStreakDays(userId);
+  }
+  if(tt==='first_to_5'||tt==='first_to_10'){
+    const target=tt==='first_to_5'?5:10;
+    const count=bookings.filter(b=>b.user_id===userId&&b.completed&&b.date>=start&&b.date<=end).length;
+    return Math.min(count,target);
+  }
+  // custom — use manual_progress from ch object
+  const key=`manual_${userId}`;
+  return ch[key]||0;
+}
+
+function getChallengeTarget(ch){
+  const tt=ch.track_type||'most_classes';
+  if(tt==='first_to_5')return 5;
+  if(tt==='first_to_10')return 10;
+  return null; // no fixed target for "most" types
+}
+
+function autoCheckWinner(ch){
+  // For "first to X" types, auto declare winner when someone hits the target
+  const target=getChallengeTarget(ch);
+  if(!target||ch.status!=='active')return null;
+  const kp=getChallengeProgress(ch,'kelsey');
+  const ep=getChallengeProgress(ch,'elizabeth');
+  if(kp>=target)return'kelsey';
+  if(ep>=target)return'elizabeth';
+  return null;
+}
+
+async function incrementCustomProgress(challengeId,userId){
+  const ch=challenges.find(c=>c.id===challengeId);
+  if(!ch)return;
+  const key=`manual_${userId}`;
+  const newVal=(ch[key]||0)+1;
+  const update={[key]:newVal};
+  const {error}=await sb.from('challenges').update(update).eq('id',challengeId);
+  if(error){showToast('Error: '+error.message);return;}
+  challenges=challenges.map(c=>c.id===challengeId?{...c,[key]:newVal}:c);
+  renderChallenges();
+}
+
+async function postChallengeComment(challengeId){
+  const inp=document.getElementById('ch-comment-'+challengeId);
+  const text=inp?.value?.trim();
+  if(!text)return;
+  const entry={id:genId(),challenge_id:challengeId,user_id:currentUser,text,created_at:new Date().toISOString()};
+  const {error}=await sb.from('challenge_comments').insert(entry);
+  if(error){showToast('Error: '+error.message);return;}
+  challengeComments=[...challengeComments,entry];
+  inp.value='';
+  renderChallenges();
 }
 
 async function declareWinner(challengeId,winnerId){
@@ -1856,35 +2040,106 @@ function renderChallenges(){
 
 function buildChallengeCard(ch){
   const card=document.createElement('div');
-  card.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:8px';
+  card.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px';
   const end=new Date(ch.end_date+'T23:59:59');
   const now=new Date();
   const daysLeft=Math.max(0,Math.ceil((end-now)/86400000));
   const isActive=ch.status==='active';
   const creator=USERS[ch.created_by]||{name:ch.created_by,color:'var(--muted)'};
   const winner=ch.winner?USERS[ch.winner]:null;
+  const tt=ch.track_type||'most_classes';
+  const isCustom=tt==='custom';
+  const isFirstTo=tt==='first_to_5'||tt==='first_to_10';
+  const target=getChallengeTarget(ch);
+  const kProg=getChallengeProgress(ch,'kelsey');
+  const eProg=getChallengeProgress(ch,'elizabeth');
+  const kLeading=kProg>eProg;
+  const eTied=kProg===eProg;
+  // Format progress display
+  const fmtProg=(v)=>{
+    if(tt==='most_steps')return v.toLocaleString()+' steps';
+    if(tt==='most_step_days')return v+' days';
+    if(tt==='most_points')return v+' pts';
+    if(tt==='longest_streak')return v+' days';
+    return String(v);
+  };
+  // Progress bar percentage
+  const maxProg=target||Math.max(kProg,eProg,1);
+  const kPct=Math.min(kProg/maxProg,1)*100;
+  const ePct=Math.min(eProg/maxProg,1)*100;
+  // Comments for this challenge
+  const chComments=challengeComments.filter(c=>c.challenge_id===ch.id);
+  const commentsHtml=chComments.map(c=>{
+    const u=USERS[c.user_id];
+    return `<div style="font-size:11px;margin-bottom:4px;line-height:1.5"><span style="font-weight:700;color:${u?.color||'var(--text)'}">${u?.name||c.user_id}: </span>${c.text}</div>`;
+  }).join('');
+
   card.innerHTML=`
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px">
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;margin-bottom:2px">${ch.name}</div>
-        ${ch.desc?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">${ch.desc}</div>`:''}
+        <div style="font-size:15px;font-weight:700;margin-bottom:1px">${ch.name}</div>
+        ${ch.desc?`<div style="font-size:11px;color:var(--muted)">${ch.desc}</div>`:''}
       </div>
-      ${isActive?`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--green)18;color:var(--green);flex-shrink:0">${daysLeft}d left</span>`
-        :`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--subtle);color:var(--muted);flex-shrink:0">Done</span>`}
+      ${isActive
+        ?`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--green)18;color:var(--green);flex-shrink:0;white-space:nowrap">${daysLeft}d left</span>`
+        :`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--subtle);color:var(--muted);flex-shrink:0">Ended</span>`}
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-      ${ch.wager?`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:${ch.wager_type==='points'?'var(--gold)18':'var(--rose)15'};color:${ch.wager_type==='points'?'var(--gold)':'var(--rose)'};border:1px solid ${ch.wager_type==='points'?'var(--gold)40':'var(--rose)40'}">${ch.wager_type==='points'?'⭐':'🎁'} ${ch.wager}</span>`:''}
-      <span style="font-size:10px;color:var(--muted)">Created by ${creator.name} · ends ${new Date(ch.end_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--subtle);color:var(--muted);border:1px solid var(--border)">${TRACK_LABELS[tt]||tt}</span>
+      ${ch.wager?`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:${ch.wager_type==='points'?'var(--gold)18':'var(--rose)12'};color:${ch.wager_type==='points'?'var(--gold)':'var(--rose)'};border:1px solid ${ch.wager_type==='points'?'var(--gold)40':'var(--rose)40'}">${ch.wager_type==='points'?'⭐':'🎁'} ${ch.wager}</span>`:''}
     </div>
-    ${winner?`<div style="display:flex;align-items:center;gap:8px;padding:9px;border-radius:8px;background:${USERS[ch.winner]?.color||'var(--gold)'}15;border:1px solid ${USERS[ch.winner]?.color||'var(--gold)'}40">
+
+    <!-- LEADERBOARD -->
+    <div style="background:var(--subtle);border-radius:9px;padding:10px;margin-bottom:10px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Leaderboard</div>
+      <!-- Kelsey -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:6px;height:6px;border-radius:50%;background:${USERS.kelsey.color};flex-shrink:0"></div>
+        <div style="font-size:12px;font-weight:700;width:72px;flex-shrink:0;color:${USERS.kelsey.color}">Kelsey</div>
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;background:${USERS.kelsey.color};border-radius:4px;width:${kPct}%;transition:width .4s"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;width:60px;text-align:right;color:${USERS.kelsey.color}">${fmtProg(kProg)}</div>
+        ${kLeading&&!eTied?'<span style="font-size:12px">👑</span>':''}
+      </div>
+      <!-- Elizabeth -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:6px;height:6px;border-radius:50%;background:${USERS.elizabeth.color};flex-shrink:0"></div>
+        <div style="font-size:12px;font-weight:700;width:72px;flex-shrink:0;color:${USERS.elizabeth.color}">Elizabeth</div>
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;background:${USERS.elizabeth.color};border-radius:4px;width:${ePct}%;transition:width .4s"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;width:60px;text-align:right;color:${USERS.elizabeth.color}">${fmtProg(eProg)}</div>
+        ${!kLeading&&!eTied?'<span style="font-size:12px">👑</span>':''}
+      </div>
+      ${eTied&&(kProg>0||eProg>0)?`<div style="text-align:center;font-size:11px;color:var(--gold);font-weight:600;margin-top:6px">🤝 Tied!</div>`:''}
+      ${target?`<div style="text-align:center;font-size:10px;color:var(--muted);margin-top:5px">First to ${target} wins</div>`:''}
+      ${isCustom&&isActive?`<div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="incrementCustomProgress('${ch.id}','kelsey')" style="flex:1;padding:6px;border-radius:6px;border:1px solid ${USERS.kelsey.color}40;background:${USERS.kelsey.color}10;color:${USERS.kelsey.color};font-size:11px;font-weight:700;cursor:pointer">+ Kelsey</button>
+        <button onclick="incrementCustomProgress('${ch.id}','elizabeth')" style="flex:1;padding:6px;border-radius:6px;border:1px solid ${USERS.elizabeth.color}40;background:${USERS.elizabeth.color}10;color:${USERS.elizabeth.color};font-size:11px;font-weight:700;cursor:pointer">+ Elizabeth</button>
+      </div>`:''}
+    </div>
+
+    ${winner?`<div style="display:flex;align-items:center;gap:8px;padding:9px;border-radius:8px;background:${USERS[ch.winner]?.color||'var(--gold)'}15;border:1px solid ${USERS[ch.winner]?.color||'var(--gold)'}40;margin-bottom:8px">
       <span style="font-size:18px">🏆</span>
       <div style="font-size:13px;font-weight:700;color:${USERS[ch.winner]?.color||'var(--gold)'}">${winner.name} won!</div>
     </div>`:''}
-    ${isActive?`<div style="display:flex;gap:6px;margin-top:8px">
+
+    ${isActive?`<div style="display:flex;gap:6px;margin-bottom:10px">
       <button onclick="declareWinner('${ch.id}','kelsey')" style="flex:1;padding:7px;border-radius:7px;border:1px solid ${USERS.kelsey.color}40;background:${USERS.kelsey.color}10;color:${USERS.kelsey.color};font-size:11px;font-weight:700;cursor:pointer">🏆 Kelsey Wins</button>
       <button onclick="declareWinner('${ch.id}','elizabeth')" style="flex:1;padding:7px;border-radius:7px;border:1px solid ${USERS.elizabeth.color}40;background:${USERS.elizabeth.color}10;color:${USERS.elizabeth.color};font-size:11px;font-weight:700;cursor:pointer">🏆 Elizabeth Wins</button>
       <button onclick="deleteChallenge('${ch.id}')" style="padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:13px;cursor:pointer">🗑️</button>
-    </div>`:`<button onclick="deleteChallenge('${ch.id}')" style="width:100%;margin-top:8px;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;cursor:pointer">Delete</button>`}
+    </div>`:`<button onclick="deleteChallenge('${ch.id}')" style="width:100%;margin-bottom:8px;padding:7px;border-radius:7px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);font-size:11px;cursor:pointer">Delete</button>`}
+
+    <!-- COMMENTS -->
+    <div style="border-top:1px solid var(--border);padding-top:9px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Comments</div>
+      <div style="margin-bottom:7px">${commentsHtml||'<div style="font-size:11px;color:var(--muted);font-style:italic">No comments yet — be the first!</div>'}</div>
+      <div style="display:flex;gap:6px">
+        <input id="ch-comment-${ch.id}" class="comment-input" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')postChallengeComment('${ch.id}')">
+        <button class="comment-send" onclick="postChallengeComment('${ch.id}')">Send</button>
+      </div>
+    </div>
   `;
   return card;
 }
